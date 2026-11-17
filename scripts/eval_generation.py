@@ -1,69 +1,89 @@
+"""Generate paired replies on a verified held-out split; this does not assign wins."""
+
+import argparse
 import json
+import random
+from pathlib import Path
+
 import torch
-from transformers import AutoTokenizer
-from model.model_minimind import MiniMindForCausalLM, MiniMindConfig
-from scripts.eval_ppl import evaluate_ppl
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-tokenizer = AutoTokenizer.from_pretrained("./model")
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-tokenizer.padding_side = "left"
+from scripts.data_splits import (
+    DEFAULT_DPO_PATH, DEFAULT_SPLIT_DIR, ensure_outputs_available, load_verified_splits,
+    prompt_key, read_jsonl, sha256_file, validate_splits, write_json,
+)
+from scripts.generation_utils import generate_replies, load_model, load_tokenizer, seed_generation
 
-def load_model(ckpt_path: str):
-    config = MiniMindConfig(hidden_size=768, num_hidden_layers=8, use_moe=False)
-    model = MiniMindForCausalLM(config)
-    model.load_state_dict(torch.load(ckpt_path, map_location=device), strict=False)
-    return model.to(device=device, dtype=torch.bfloat16).eval()
 
-@torch.no_grad()
-def batch_generate(model, prompts: list[str], batch_size: int = 25) -> list[str]:
-    all_replies = []
-    for start in range(0, len(prompts), batch_size):
-        batch_p = prompts[start:start + batch_size]
-        texts = [
-            tokenizer.apply_chat_template([{"role": "user", "content": p}], tokenize=False, add_generation_prompt=True)
-            for p in batch_p
-        ]
-        enc = tokenizer(texts, return_tensors="pt", padding=True).to(device)
-        prompt_len = enc["input_ids"].shape[1]
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--split-dir", default=DEFAULT_SPLIT_DIR)
+    parser.add_argument("--split", choices=["val", "test"], default="test")
+    parser.add_argument("--dpo-path", help="默认读取权重旁训练记录中的实际数据路径")
+    parser.add_argument("--sft-checkpoint", default="out/medical_sft_neftune_768.pth")
+    parser.add_argument("--dpo-checkpoint", default="out/medical_dpo_768.pth")
+    parser.add_argument("--tokenizer-path", default="model")
+    parser.add_argument("--num-samples", type=int, default=50)
+    parser.add_argument("--batch-size", type=int, default=25)
+    parser.add_argument("--max-new-tokens", type=int, default=220)
+    parser.add_argument("--temperature", type=float, default=0.7)
+    parser.add_argument("--top-p", type=float, default=0.9)
+    parser.add_argument("--hidden-size", type=int, default=768)
+    parser.add_argument("--num-hidden-layers", type=int, default=8)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--output")
+    parser.add_argument("--overwrite", action="store_true")
+    args = parser.parse_args()
+    if args.num_samples < 1:
+        parser.error("--num-samples 必须大于 0")
+    output = args.output or f"out/generation_{args.split}.json"
+    metadata_path = f"{output}.metadata.json"
+    ensure_outputs_available([output, metadata_path], args.overwrite)
+    splits, _ = load_verified_splits(args.split_dir)
+    training_path = Path(args.dpo_checkpoint).with_suffix(".training.json")
+    training = json.loads(training_path.read_text()) if training_path.exists() else None
+    if args.dpo_path is None:
+        args.dpo_path = (training["settings"]["data_path"].removeprefix("../")
+                         if training else DEFAULT_DPO_PATH)
+    if training and training["data_sha256"] != sha256_file(args.dpo_path):
+        raise ValueError("DPO 数据与权重训练记录中的哈希不一致")
+    validate_splits(splits, read_jsonl(args.dpo_path))
+    unique_rows = {}
+    for row in splits[args.split]:
+        unique_rows.setdefault(prompt_key(row["conversations"]), row)
+    selected = random.Random(args.seed).sample(list(unique_rows.values()), min(args.num_samples, len(unique_rows)))
+    prompts = [next(message["content"] for message in row["conversations"] if message["role"] == "user")
+               for row in selected]
+    tokenizer = load_tokenizer(args.tokenizer_path)
+    replies = {}
+    for name, checkpoint in [("sft", args.sft_checkpoint), ("dpo", args.dpo_checkpoint)]:
+        seed_generation(args.seed)
+        model = load_model(checkpoint, args.device, args.hidden_size, args.num_hidden_layers)
+        replies[name] = generate_replies(model, tokenizer, prompts, args.device, args.batch_size,
+                                         args.max_new_tokens, args.temperature, args.top_p)
+        del model
+        if str(args.device).startswith("cuda"):
+            torch.cuda.empty_cache()
+    cases = [
+        {"id": index + 1, "prompt_key": prompt_key(row["conversations"]), "prompt": question,
+         "sft_reply": sft, "dpo_reply": dpo}
+        for index, (row, question, sft, dpo) in enumerate(zip(selected, prompts, replies["sft"], replies["dpo"]))
+    ]
+    write_json(output, cases)
+    write_json(metadata_path, {
+        "settings": vars(args),
+        "samples": len(cases),
+        "manifest_sha256": sha256_file(Path(args.split_dir) / "manifest.json"),
+        "data_sha256": sha256_file(Path(args.split_dir) / f"{args.split}.jsonl"),
+        "dpo_data_sha256": sha256_file(args.dpo_path),
+        "sft_checkpoint_sha256": sha256_file(args.sft_checkpoint),
+        "dpo_checkpoint_sha256": sha256_file(args.dpo_checkpoint),
+        "cases_sha256": sha256_file(output),
+        "prompt_keys": [case["prompt_key"] for case in cases],
+        "judging": "not performed; randomize A/B order and save item-level judgments before reporting win rate",
+    })
+    print(f"{len(cases)} 条生成对比 -> {output}；此脚本不自动产生盲测胜率。")
 
-        outputs = model.generate(
-            input_ids=enc["input_ids"],
-            attention_mask=enc["attention_mask"],
-            max_new_tokens=220,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id
-        )
-        for i in range(len(batch_p)):
-            all_replies.append(tokenizer.decode(outputs[i][prompt_len:], skip_special_tokens=True).strip())
-    return all_replies
 
 if __name__ == "__main__":
-    # 1. 验证 DPO+NLL 模型的验证集 PPL（证明加入 NLL 正则后未发生语言退化）
-    evaluate_ppl("./out/dpo_nll_768.pth", "./dataset/sft_vertical_mix_val.jsonl")
-
-    # 2. 批量生成 50 条验证集问题的 SFT vs DPO 回复对比
-    with open("./dataset/sft_vertical_mix_val.jsonl", "r", encoding="utf-8") as f:
-        val_items = [json.loads(line) for line in f][:50]
-    prompts = [item["conversations"][0]["content"] for item in val_items]
-
-    sft_model = load_model("./out/full_sft_neftune_768.pth")
-    sft_replies = batch_generate(sft_model, prompts)
-    del sft_model
-    torch.cuda.empty_cache()
-
-    dpo_model = load_model("./out/dpo_nll_768.pth")
-    dpo_replies = batch_generate(dpo_model, prompts)
-
-    results = [
-        {"id": i + 1, "prompt": p, "sft_reply": s, "dpo_reply": d}
-        for i, (p, s, d) in enumerate(zip(prompts, sft_replies, dpo_replies))
-    ]
-    with open("./out/ablation_eval_cases.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-
-    print("50 条对比样本已生成至 ./out/ablation_eval_cases.json")
+    main()

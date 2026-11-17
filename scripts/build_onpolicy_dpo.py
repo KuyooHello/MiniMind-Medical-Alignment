@@ -1,97 +1,99 @@
-import os
-import re
-import glob
-import json
+"""Build weakly labelled DPO pairs exclusively from the verified training split."""
+
+import argparse
+import random
+from pathlib import Path
+
 import torch
-from tqdm import tqdm
-from transformers import AutoTokenizer
-from model.model_minimind import MiniMindForCausalLM, MiniMindConfig
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-tokenizer = AutoTokenizer.from_pretrained("./model")
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-tokenizer.padding_side = "left"
+from scripts.data_splits import (
+    DEFAULT_DPO_PATH, DEFAULT_SPLIT_DIR, ensure_outputs_available, load_verified_splits,
+    prompt_key, sha256_file, validate_splits, write_json, write_jsonl,
+)
+from scripts.generation_utils import generate_replies, load_model, load_tokenizer, seed_generation
 
-MAX_LEN = 512
-BATCH_SIZE = 32
 
-def clean_prefix(text: str) -> str:
-    return re.sub(r"^(问|答|患者|医生|User|Assistant)[：:]\s*", "", str(text)).strip()
+def select_candidates(rows, domain_keys, tokenizer, limit, max_length, seed):
+    shuffled = list(rows)
+    random.Random(seed).shuffle(shuffled)
+    candidates, seen = [], set()
+    for row in shuffled:
+        messages = row["conversations"]
+        key = prompt_key(messages)
+        if key not in domain_keys or key in seen:
+            continue
+        first_user = next(index for index, message in enumerate(messages) if message["role"] == "user")
+        if first_user + 1 >= len(messages) or messages[first_user + 1]["role"] != "assistant":
+            continue
+        chosen = [messages[first_user], messages[first_user + 1]]
+        text = tokenizer.apply_chat_template(chosen, tokenize=False)
+        if not 40 <= len(tokenizer.encode(text, add_special_tokens=False)) <= max_length:
+            continue
+        seen.add(key)
+        candidates.append((key, chosen, len(tokenizer.encode(chosen[0]["content"], add_special_tokens=False))))
+        if len(candidates) >= limit:
+            break
+    # Token length, rather than character length, controls the actual padding cost.
+    candidates.sort(key=lambda item: item[2])
+    return candidates
 
-@torch.no_grad()
-def generate_rejected_batch(model, prompts: list[str]) -> list[str]:
-    texts = [
-        tokenizer.apply_chat_template([{"role": "user", "content": p}], tokenize=False, add_generation_prompt=True)
-        for p in prompts
-    ]
-    enc = tokenizer(texts, return_tensors="pt", padding=True).to(device)
-    prompt_len = enc["input_ids"].shape[1]
-
-    outputs = model.generate(
-        input_ids=enc["input_ids"],
-        attention_mask=enc["attention_mask"],
-        max_new_tokens=180,
-        do_sample=True,
-        temperature=1.0,
-        top_p=0.92,
-        pad_token_id=tokenizer.pad_token_id,
-        eos_token_id=tokenizer.eos_token_id
-    )
-    replies = []
-    for i in range(len(prompts)):
-        gen_ids = outputs[i][prompt_len:]
-        replies.append(tokenizer.decode(gen_ids, skip_special_tokens=True).strip())
-    return replies
 
 def main():
-    ckpt = "./out/full_sft_neftune_768.pth"
-    config = MiniMindConfig(hidden_size=768, num_hidden_layers=8, use_moe=False)
-    model = MiniMindForCausalLM(config)
-    model.load_state_dict(torch.load(ckpt, map_location=device), strict=False)
-    # 启用 bfloat16 触发 Tensor Core 推理加速
-    model.to(device=device, dtype=torch.bfloat16).eval()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--split-dir", default=DEFAULT_SPLIT_DIR)
+    parser.add_argument("--checkpoint", default="out/medical_sft_neftune_768.pth")
+    parser.add_argument("--output", default=DEFAULT_DPO_PATH)
+    parser.add_argument("--tokenizer-path", default="model")
+    parser.add_argument("--limit", type=int, default=2500, help="最多采样的问题数；过滤后有效偏好对可能更少")
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--max-length", type=int, default=512)
+    parser.add_argument("--max-new-tokens", type=int, default=180)
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--top-p", type=float, default=0.92)
+    parser.add_argument("--hidden-size", type=int, default=768)
+    parser.add_argument("--num-hidden-layers", type=int, default=8)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--overwrite", action="store_true")
+    args = parser.parse_args()
+    if args.limit < 1:
+        parser.error("--limit 必须大于 0")
+    metadata_path = f"{args.output}.metadata.json"
+    ensure_outputs_available([args.output, metadata_path], args.overwrite)
+    splits, manifest = load_verified_splits(args.split_dir)
+    tokenizer = load_tokenizer(args.tokenizer_path)
+    candidates = select_candidates(splits["train"], set(manifest["domain_prompt_keys"]),
+                                   tokenizer, args.limit, args.max_length, args.seed)
+    if not candidates:
+        raise ValueError("训练集中没有满足长度条件的医疗偏好候选问题")
+    seed_generation(args.seed)
+    model = load_model(args.checkpoint, args.device, args.hidden_size, args.num_hidden_layers)
+    prompts = [chosen[0]["content"] for _, chosen, _ in candidates]
+    replies = generate_replies(model, tokenizer, prompts, args.device, args.batch_size,
+                               args.max_new_tokens, args.temperature, args.top_p)
+    pairs = []
+    for (key, chosen, _), reply in zip(candidates, replies):
+        if len(reply) < 10 or reply == chosen[1]["content"].strip():
+            continue
+        rejected = [chosen[0], {"role": "assistant", "content": reply}]
+        text = tokenizer.apply_chat_template(rejected, tokenize=False)
+        if len(tokenizer.encode(text, add_special_tokens=False)) <= args.max_length:
+            pairs.append({"prompt_key": key, "chosen": chosen, "rejected": rejected})
+    validate_splits(splits, pairs)
+    write_jsonl(args.output, pairs)
+    write_json(metadata_path, {
+        "schema_version": 1,
+        "label_source": "weak labels: dataset answer as chosen; SFT sample as rejected; not quality-verified",
+        "settings": vars(args),
+        "sampled_prompts": len(candidates),
+        "pairs": len(pairs),
+        "manifest_sha256": sha256_file(Path(args.split_dir) / "manifest.json"),
+        "checkpoint_sha256": sha256_file(args.checkpoint),
+        "dataset_sha256": sha256_file(args.output),
+    })
+    print(f"已生成 {len(pairs)} 对弱标注偏好数据 -> {args.output}")
+    print("检查通过：全部问题属于 train，与 val/test 的规范化问题交集为 0。")
 
-    files = glob.glob("./dataset/raw/**/*HuatuoGPT*.jsonl", recursive=True)
-    candidates = []
-    with open(files[0], "r", encoding="utf-8") as f:
-        for idx, line in enumerate(f):
-            if idx < 30000:
-                continue
-            row = json.loads(line)
-            raw = row.get("data") or []
-            if len(raw) >= 2 and isinstance(raw[0], str):
-                q, a = clean_prefix(raw[0]), clean_prefix(raw[1])
-                if q and a:
-                    chosen_conv = [{"role": "user", "content": q}, {"role": "assistant", "content": a}]
-                    c_len = len(tokenizer.encode(tokenizer.apply_chat_template(chosen_conv, tokenize=False)))
-                    if 40 <= c_len <= MAX_LEN:
-                        candidates.append((q, chosen_conv, len(q)))
-            if len(candidates) >= 2500:
-                break
-
-    # 按问题长度排序后再分批，最小化 left-padding 开销并保持 RoPE 位置精确
-    candidates.sort(key=lambda x: x[2])
-
-    dpo_pairs = []
-    for start in tqdm(range(0, len(candidates), BATCH_SIZE), desc="Batch Generating DPO pairs"):
-        batch = candidates[start:start + BATCH_SIZE]
-        prompts = [item[0] for item in batch]
-        rej_texts = generate_rejected_batch(model, prompts)
-
-        for (q, chosen_conv, _), rej_text in zip(batch, rej_texts):
-            if len(rej_text) < 10 or rej_text == chosen_conv[1]["content"]:
-                continue
-            rejected_conv = [{"role": "user", "content": q}, {"role": "assistant", "content": rej_text}]
-            r_len = len(tokenizer.encode(tokenizer.apply_chat_template(rejected_conv, tokenize=False)))
-            if r_len <= MAX_LEN:
-                dpo_pairs.append({"chosen": chosen_conv, "rejected": rejected_conv})
-
-    with open("./dataset/dpo_vertical.jsonl", "w", encoding="utf-8") as out:
-        for item in dpo_pairs:
-            out.write(json.dumps(item, ensure_ascii=False) + "\n")
-
-    print(f"On-Policy 医疗 DPO 数据集构建完成，共 {len(dpo_pairs)} 对 -> ./dataset/dpo_vertical.jsonl")
 
 if __name__ == "__main__":
     main()

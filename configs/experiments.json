@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "protocol": {
+    "training_split": "dataset/medical/train.jsonl",
+    "validation_split": "dataset/medical/val.jsonl",
+    "fresh_test_split": "dataset/medical/test.jsonl",
+    "validation_samples": 300,
+    "final_test_samples": 1000,
+    "primary_selection_metric": "response_loss on validation only",
+    "test_policy": "Seal fresh test before new experiments; do not select hyperparameters or checkpoints using test results.",
+    "reference_policy": "All DPO variants start from the fixed seed-42 NEFTune SFT checkpoint.",
+    "factorial_policy": "Identical beta, learning rate, seed, data, epochs and per-token NLL scaling across sum/mean x NLL-off/on."
+  },
+  "sft": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "settings": {
+      "data_path": "../dataset/medical/train.jsonl",
+      "from_weight": "pretrain",
+      "epochs": 2,
+      "batch_size": 32,
+      "learning_rate": 0.00005
+    }
+  },
+  "dpo": {
+    "settings": {
+      "data_path": "../dataset/dpo_medical.jsonl",
+      "from_weight": "medical_sft_neftune",
+      "epochs": 2,
+      "batch_size": 8,
+      "learning_rate": 0.000002,
+      "seed": 42,
+      "beta": 0.15
+    },
+    "variants": [
+      {
+        "name": "dpo_sum",
+        "overrides": {
+          "length_normalize": 0,
+          "nll_weight": 0
+        }
+      },
+      {
+        "name": "dpo_mean",
+        "overrides": {
+          "length_normalize": 1,
+          "nll_weight": 0
+        }
+      },
+      {
+        "name": "dpo_sum_nll",
+        "overrides": {
+          "length_normalize": 0,
+          "nll_weight": 0.1
+        }
+      },
+      {
+        "name": "dpo_mean_nll",
+        "overrides": {
+          "length_normalize": 1,
+          "nll_weight": 0.1
+        }
+      },
+      {
+        "name": "dpo_mean_nll_filtered",
+        "overrides": {
+          "length_normalize": 1,
+          "nll_weight": 0.1,
+          "data_path": "../dataset/dpo_medical_filtered.jsonl"
+        }
+      }
+    ]
+  }
+}

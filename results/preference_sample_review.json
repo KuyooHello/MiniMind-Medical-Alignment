@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "review_method": "Model-assisted semantic review of a fixed uniform random sample; reference/sample identities visible. Not independent medical-expert labels.",
+  "selection_seed": 20261117,
+  "sample_size": 50,
+  "policy": "Do not flip labels. Remove audited pairs with uncertain/reversed preferences or a major identified reference problem. All unaudited retained pairs remain weak labels.",
+  "note": "A relative preference is not a certification of medical correctness. Items requiring specialist confirmation are excluded conservatively.",
+  "judgments": [
+    {
+      "audit_id": 1,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案覆盖癌症预防相关饮食，采样答案较泛化；果汁等建议仍需个体化，不能作临床认证。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 2,
+      "preference": "sampled_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案将通气参数写成统一正常值，潮气量范围及吸气流量单位明显可疑；采样虽空泛，较少给出危险定值。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 3,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案正确区分性行为频率与感染风险并提及疫苗；采样包含每周生成性病病毒等错误。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 4,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案较直接回应饮食与持续症状就医；采样无依据限制多类正常食物，内容重复。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 5,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考答案把无痛静脉曲张普遍推向手术，采样又加入放疗；两者都未可靠区分指征，不认定参考标签正确。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 6,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "采样擅荐眼角问题口服异维A酸、激素等更危险；参考答案也将泪阜与泪液储存混淆并推测囊肿，排除可疑参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 7,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案强调康复医师个体化、逐步增加活动；采样建议定期进行全面关节置换，且运动推荐缺乏阶段依据。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 8,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案较相关但把冷风冷水与其他感染作不可靠因果关联；采样同样泛化环境病因，保守排除未核实的参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 9,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案先明确继发性不孕病因再讨论条件性方案；采样将不孕改写成怀孕并出现感染妊娠等错误。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 10,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案保留脊柱侧弯、疼麻症状并建议评估；采样捏造颞下颌关节炎和既往切除手术。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 11,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案主动询问头痛频率、时长、程度及伴随症状；采样循环解释病因并建议与伴侣进行体检。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 12,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案采用常见140/90标准及分级，采样分类混乱；仍须说明诊断需规范重复测量，地区指南存在差别。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 13,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案分别处理牙龈出血与月经问题，采样臆造病变及治疗；维生素缓解痛经等附带说法证据不足。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 14,
+      "preference": "sampled_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案对脑梗合并严重头痛先推荐泛化神经保护药，急诊评估不足；采样更直接强调尽快医院诊治。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 15,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案回应自杀想法并引导专业求助和社会支持，采样未直接识别该风险；仍需进一步评估当前危险。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 16,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案正视肝癌疼痛和肝功能，但将白蛋白列为止痛药；采样又否认已明确描述的严重疼痛，参考仍有重大错误。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 17,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案识别结核杆菌及呼吸传播，采样误称病毒与寄生虫；疫苗和传播术语仍需结合地区与气溶胶概念。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 18,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考答案把尿中沉淀直接归为包皮垢并建议手术清除，采样臆测囊肿；均无可靠证据支持当前标签。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 19,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案较采样少捏造，但忽略肛痛伴发热的感染警示，妊娠期避免用药表述过于一概化，保守排除。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 20,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案明确严重消化道出血需紧急治疗；采样以生活方式调整为主并捏造病理机制。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 21,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案强调患者情况、长期治疗与医生指导；采样把低血压、高血脂等概念混入治疗。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 22,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考答案沿用感冒细菌这一错误前提，采样又把心律失常评估混同病毒诊断，均不宜作为可靠偏好标签。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 23,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案以注意力、活动冲动和功能影响区分行为，采样把淘气和多动症错误描述为性行为。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 24,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案比采样更切题，但将4毫米息肉随访及手术阈值过度绝对化，未讨论风险因素与地区指南，不保留为优质参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 25,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考答案编造未提供的CT及化验日期，未识别十天不能进食饮水的风险；采样也严重胡言，标签不确定。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 26,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考答案比采样更相关，但将病因简单归为油脂并要求停用含化学成分洗发水，附带药物建议依据不足。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 27,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案提及抗生素按医嘱使用和时长，采样仅列泛化生活方式；参考的消毒剂与动物接触措辞仍需限定。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 28,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案对完全切除的IA期非小细胞肺癌不常规化疗的方向较合理，并建议与主治沟通；采样机械要求化疗且夸大疗效。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 29,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考答案强调肝硬化病因和病情决定治疗，采样泛列免疫治疗和手术且逻辑不清。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 30,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "题干部分语义混乱；参考至少回到心理治疗及辅助活动，采样未说明所指风险，偏好判断仅限相关性。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 31,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考含口罩、疫苗与减少接触等有用内容，采样反复复读；传播说明仍需补充空气中颗粒及通风。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 32,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考编造前列腺结石早中晚期过程并复制题干不可靠症状，采样同样混乱；需专科核查。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 33,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考虽提及甲状腺素，但捏造血小板降低并给出无依据的碘摄入频次；采样将无结节改成结节，参考仍不可靠。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 34,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考断言中医通卵方案疗效较好，采样又把化放疗用于输卵管阻塞；均不能作为可靠优选答案。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 35,
+      "preference": "sampled_preferred",
+      "reference_major_issue": true,
+      "reason": "采样询问血压、体重、现用药和并发症，适合调整方案；参考对普通高血压控制不佳泛化建议手术。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 36,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考饮食、避免生食及产检较完整；采样错误将豆腐归为油腻并减少肉类，仍应明确孕期避免饮酒而非只避免大量。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 37,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考把怕独睡、睡眠恐惧与夜间恐惧混为同一障碍并过早命名；采样捏造体温、胸痛等，虽较差仍不能认证参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 38,
+      "preference": "sampled_preferred",
+      "reference_major_issue": true,
+      "reason": "参考凭空断言已到第二周期且病情改善，采样至少未编造该患者的具体疗程；二者仍需更多病情信息。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 39,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考书名、作者、出版社的对应关系未经核实，采样也只列模糊书名，不将书目细节当作可靠证据。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 40,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考引导按批准文号查监管机构或厂家及咨询药师；采样引入高血压高血脂等无关适应证。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 41,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考建议依据病情就医而未乱列具体处方；采样无依据列氯吡格雷等药物治疗淋巴结炎。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 42,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "题目依赖未提供X光；参考假称看过片子并捏造初潮年限，采样错误转为胎儿产检，参考标签不可用。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 43,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考把局部影像纤维化直接等同进行性肺间质疾病，过度推断；采样更混乱，仍保守排除参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 44,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考较切题，但将MRI概括为确定结节性质手段且对恶性均立即手术，未分层，保守排除不确定参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 45,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考为婴儿红色斑块提出血管母细胞瘤及放射治疗，采样同样混淆手术与检查，不能认定正确标签。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 46,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考区分避免负重与恢复期康复训练，采样主要强调减少活动；仍需个体评估而非通用处方。",
+      "retain_in_filtered_control": true
+    },
+    {
+      "audit_id": 47,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考较采样少捏造输液，但2.5厘米自吸收阈值及部分胎盘剥离推断缺乏条件依据，排除未核实参考。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 48,
+      "preference": "reference_preferred",
+      "reference_major_issue": true,
+      "reason": "参考虽更克制，但仍将清肝解毒植物疗效作为前提，缺乏明确临床终点与证据；不作为已验证的优质标签。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 49,
+      "preference": "uncertain",
+      "reference_major_issue": true,
+      "reason": "参考未确定年龄病因就为儿童肛周指定激素抗真菌复方，采样也荒谬；两边不适合构建可靠偏好。",
+      "retain_in_filtered_control": false
+    },
+    {
+      "audit_id": 50,
+      "preference": "reference_preferred",
+      "reference_major_issue": false,
+      "reason": "参考直接回应孕期心理治疗并追问症状、鼓励支持，采样以免疫力等泛化内容取代心理评估。",
+      "retain_in_filtered_control": true
+    }
+  ],
+  "references": [
+    "https://www.cdc.gov/common-cold/about/",
+    "https://www.cdc.gov/tb/causes/index.html",
+    "https://www.who.int/news-room/fact-sheets/detail/hypertension",
+    "https://www.nhs.uk/conditions/varicose-veins/",
+    "https://www.cancer.gov/types/lung/hp/non-small-cell-lung-treatment-pdq",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC9038818/",
+    "https://www.brit-thoracic.org.uk/clinical-resources/guidelines/niv/"
+  ],
+  "input_sha256": "e3182342cab9313b529e1fa36c76381e06c8ad3a7907cde263c888c8c15c1668"
+}

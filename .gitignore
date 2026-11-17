@@ -8,11 +8,12 @@ docs-minimind/
 out/*.pth
 out/ablation_eval_cases.json
 dataset/*.jsonl
+dataset/*.jsonl.metadata.json
 dataset/raw*/
+dataset/medical_split_*/
+dataset/medical/
 checkpoints/
 *.log
-__pycache__/
-
 *.safetensors
 *.bin
 minimind-3/

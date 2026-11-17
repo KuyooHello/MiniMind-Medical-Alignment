@@ -1,0 +1,23 @@
+{
+  "config_sha256": "2b83231959b22dc901eb24f6c6e38e946bc4ddb63808f873d26f92885a3e964f",
+  "manifest_sha256": "0728abf9074c296082698104030a5198ca7dcb9e419bd8dc164abe0affa649ef",
+  "data_sha256": "a4993e29ad4baad646244de28efac2537351df73d01d4e5cbb16155f44032f5a",
+  "evaluation_implementation_sha256": "e6b8f03374a6c3647795313e7a368b775ea3aa2222fa1d990b7cfbc73a14531f",
+  "selection_metric": "response_loss",
+  "selection_split": "val",
+  "validation_results_sha256": "c1ef1e701d26865beb4c7011287cc36fef99fd0f1102a59d3d5d367cbf27c9b3",
+  "eligible_models": [
+    "sft_base_seed42",
+    "sft_neftune_seed42",
+    "dpo_sum",
+    "dpo_mean",
+    "dpo_sum_nll",
+    "dpo_mean_nll",
+    "dpo_mean_nll_filtered"
+  ],
+  "selected": "sft_neftune_seed42",
+  "selected_checkpoint": "out/experiments/sft_neftune_seed42_768.pth",
+  "best_dpo": "dpo_mean_nll_filtered",
+  "best_dpo_checkpoint": "out/experiments/dpo_mean_nll_filtered_768.pth",
+  "fixed_representative_seed": 42
+}

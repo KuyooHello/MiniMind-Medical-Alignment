@@ -1,0 +1,29 @@
+{
+  "unit_tests": {
+    "command": "PYTHONPATH=. python -m unittest discover -s tests -v",
+    "passed": 29,
+    "failed": 0
+  },
+  "real_checkpoint_batch_consistency": {
+    "checkpoint_sha256": "003d86879cf082c2547e0a893c2b5045f0c09cc8c1467e3dcea6f1241df8bf6f",
+    "test_rows": 3,
+    "batch_sizes": [
+      1,
+      3
+    ],
+    "full_and_response_token_counts_equal": true,
+    "full_and_response_loss_absolute_difference_below": 2e-05
+  },
+  "cli_help_entrypoints_passed": 11,
+  "data_and_checkpoint_hash_checks": "passed",
+  "validation_selection_unchanged_after_test": true,
+  "test_result_sha256": "9cf441d9c1a4b2076a9944f77ac020c13c1abf25d588cd62eb58314c354a6f7b",
+  "validation_result_sha256": "c1ef1e701d26865beb4c7011287cc36fef99fd0f1102a59d3d5d367cbf27c9b3",
+  "tests_source_sha256": {
+    "tests/test_alignment_objectives.py": "574ab3b2f89128e073ec7d6915327d4a147d167bbfcb08c67184b4f1a638484c",
+    "tests/test_blind_review.py": "7175a6c0410dd3a7db120823acfcc5d7f0d36b51f24c192a5eabaa444f045fb7",
+    "tests/test_data_splits.py": "d7c079e9eab3d6387cf6ce3dede22c5aed0633d34c232f23a3cd0d648cb79aff",
+    "tests/test_experiment_runner.py": "11d6b58c18ba7e9c39d6fb2bbc141e873236225b5ee0e50e6281377b882a612a",
+    "tests/test_preference_audit.py": "1b32a0cf1ad6a6ced75f4c5c59a8df728a7f39279d3d5df16c539f4a4a0f3ea4"
+  }
+}

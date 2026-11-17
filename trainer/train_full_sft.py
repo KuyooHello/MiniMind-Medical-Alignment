@@ -16,7 +16,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
 from model.model_minimind import MiniMindConfig
 from dataset.lm_dataset import SFTDataset
-from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, init_model, SkipBatchSampler
+from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, init_model, SkipBatchSampler, record_training_run
 
 warnings.filterwarnings('ignore')
 
@@ -130,6 +130,7 @@ if __name__ == "__main__":
     train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None
     scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype == 'float16'))
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    record_training_run(args, lm_config)
     
     # ========== 6. 从ckp恢复状态 ==========
     start_epoch, start_step = 0, 0
@@ -160,6 +161,7 @@ if __name__ == "__main__":
         else:
             train_epoch(epoch, loader, len(loader), 0, wandb)
     
+    record_training_run(args, lm_config, completed=True)
     # ========== 9. 清理分布进程 ==========
     if dist.is_initialized():
         dist.barrier()

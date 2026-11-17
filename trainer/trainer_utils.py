@@ -62,6 +62,31 @@ def setup_seed(seed: int):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+
+def record_training_run(args, config, completed=False):
+    """Save actual CLI settings, input fingerprints, and runtime beside each checkpoint."""
+    if not is_main_process():
+        return
+    import json
+    from pathlib import Path
+    from scripts.data_splits import sha256_file
+    suffix = '_moe' if config.use_moe else ''
+    output = Path(args.save_dir) / f'{args.save_weight}_{config.hidden_size}{suffix}.training.json'
+    initial = Path('../out') / f'{args.from_weight}_{config.hidden_size}{suffix}.pth'
+    source_root = Path(__file__).resolve().parents[1]
+    payload = {
+        'completed': completed, 'settings': vars(args), 'model_config': config.to_dict(),
+        'data_sha256': sha256_file(args.data_path),
+        'initial_checkpoint_sha256': sha256_file(initial) if initial.is_file() else None,
+        'torch_version': torch.__version__,
+        'gpu': torch.cuda.get_device_name() if str(args.device).startswith('cuda') else None,
+        'source_sha256': {str(path.relative_to(source_root)): sha256_file(path) for path in
+                          [source_root / 'model/model_minimind.py', source_root / 'dataset/lm_dataset.py',
+                           source_root / ('trainer/train_dpo.py' if hasattr(args, 'beta') else 'trainer/train_full_sft.py')]},
+    }
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
 def lm_checkpoint(lm_config, weight='full_sft', model=None, optimizer=None, epoch=0, step=0, wandb=None, save_dir='../checkpoints', **kwargs):
     os.makedirs(save_dir, exist_ok=True)
     moe_path = '_moe' if lm_config.use_moe else ''

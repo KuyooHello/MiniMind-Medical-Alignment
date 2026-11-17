@@ -1,0 +1,258 @@
+{
+  "phase": "val",
+  "samples": 300,
+  "batch_size": 16,
+  "metric_scope": "Both full-conversation and assistant-response token NLL/PPL",
+  "config_sha256": "2b83231959b22dc901eb24f6c6e38e946bc4ddb63808f873d26f92885a3e964f",
+  "manifest_sha256": "0728abf9074c296082698104030a5198ca7dcb9e419bd8dc164abe0affa649ef",
+  "data_sha256": "a4993e29ad4baad646244de28efac2537351df73d01d4e5cbb16155f44032f5a",
+  "evaluation_implementation_sha256": "e6b8f03374a6c3647795313e7a368b775ea3aa2222fa1d990b7cfbc73a14531f",
+  "results": [
+    {
+      "id": "pretrain",
+      "kind": "pretrain",
+      "seed": null,
+      "checkpoint": "out/pretrain_768.pth",
+      "checkpoint_sha256": "0191958e7a96ef7cd1e443d379dc2ebea90cfea72cc4450fbcb4a7b87ff945f6",
+      "loss": 3.409770809973332,
+      "ppl": 30.25830856208784,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 3.135294824738274,
+      "response_ppl": 22.995414459783216,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_base_seed42",
+      "kind": "sft_base",
+      "seed": 42,
+      "checkpoint": "out/experiments/sft_base_seed42_768.pth",
+      "checkpoint_sha256": "e5626215df1b522e961e975fea07b208bf32449d0e9348675e13d0aa62ce72ad",
+      "loss": 2.207934246251667,
+      "ppl": 9.096905004270619,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5441294893881066,
+      "response_ppl": 4.683892473703156,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_neftune_seed42",
+      "kind": "sft_neftune",
+      "seed": 42,
+      "checkpoint": "out/experiments/sft_neftune_seed42_768.pth",
+      "checkpoint_sha256": "003d86879cf082c2547e0a893c2b5045f0c09cc8c1467e3dcea6f1241df8bf6f",
+      "loss": 2.1825920794442086,
+      "ppl": 8.869266331642327,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5432944495687217,
+      "response_ppl": 4.67998286954265,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_base_seed43",
+      "kind": "sft_base",
+      "seed": 43,
+      "checkpoint": "out/experiments/sft_base_seed43_768.pth",
+      "checkpoint_sha256": "64aafff169e74ea6d5a107d7aacf7fd912589f74e58883f729df2735b0760ec8",
+      "loss": 2.177596292530987,
+      "ppl": 8.825067861966023,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5448107015883523,
+      "response_ppl": 4.6870842854279955,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_neftune_seed43",
+      "kind": "sft_neftune",
+      "seed": 43,
+      "checkpoint": "out/experiments/sft_neftune_seed43_768.pth",
+      "checkpoint_sha256": "2652946b46cd7555eaae0b2436b34be0807a4044a342711bde98fdc025ea9fe7",
+      "loss": 2.19053580188572,
+      "ppl": 8.94000190154086,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5438095292113045,
+      "response_ppl": 4.682394054369189,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_base_seed44",
+      "kind": "sft_base",
+      "seed": 44,
+      "checkpoint": "out/experiments/sft_base_seed44_768.pth",
+      "checkpoint_sha256": "f6884c6bc7730f777b72632ed32f55dc76eee97b193ebb6250d5629404a6fc34",
+      "loss": 2.171571229222226,
+      "ppl": 8.77205612928285,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5433642794990605,
+      "response_ppl": 4.680309683830994,
+      "response_tokens": 61467
+    },
+    {
+      "id": "sft_neftune_seed44",
+      "kind": "sft_neftune",
+      "seed": 44,
+      "checkpoint": "out/experiments/sft_neftune_seed44_768.pth",
+      "checkpoint_sha256": "056fefb74d1c6bcca28076a1e95d729a8ec8f256e8d398f19569b8f309985482",
+      "loss": 2.168092266008546,
+      "ppl": 8.741591492103364,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.5422340840028999,
+      "response_ppl": 4.675023006957628,
+      "response_tokens": 61467
+    },
+    {
+      "id": "dpo_sum",
+      "kind": "dpo",
+      "seed": 42,
+      "checkpoint": "out/experiments/dpo_sum_768.pth",
+      "length_normalize": 0,
+      "nll_weight": 0,
+      "checkpoint_sha256": "9f11131becd56a5e8238c423ec8fee5a89d581f9746bdce7d63f3d10f0ff4d3c",
+      "loss": 2.359325210050609,
+      "ppl": 10.583807195546651,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.7162677626434713,
+      "response_ppl": 5.563724525291405,
+      "response_tokens": 61467
+    },
+    {
+      "id": "dpo_mean",
+      "kind": "dpo",
+      "seed": 42,
+      "checkpoint": "out/experiments/dpo_mean_768.pth",
+      "length_normalize": 1,
+      "nll_weight": 0,
+      "checkpoint_sha256": "8d99cafc2754127d107bfb940af732f460e956f7b29fef2b52705b7b7daf86c8",
+      "loss": 13.173028147539245,
+      "ppl": 525985.0911722938,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 14.700181601509753,
+      "response_ppl": 2422187.4662148086,
+      "response_tokens": 61467
+    },
+    {
+      "id": "dpo_sum_nll",
+      "kind": "dpo",
+      "seed": 42,
+      "checkpoint": "out/experiments/dpo_sum_nll_768.pth",
+      "length_normalize": 0,
+      "nll_weight": 0.1,
+      "checkpoint_sha256": "856e973845558b10b2159a1826e141dcfe35d8689baa92c38ea5eb6c008a4e8f",
+      "loss": 2.2767907216914662,
+      "ppl": 9.745354614644725,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.6300495289265988,
+      "response_ppl": 5.104127514233328,
+      "response_tokens": 61467
+    },
+    {
+      "id": "dpo_mean_nll",
+      "kind": "dpo",
+      "seed": 42,
+      "checkpoint": "out/experiments/dpo_mean_nll_768.pth",
+      "length_normalize": 1,
+      "nll_weight": 0.1,
+      "checkpoint_sha256": "eda38fa8321f477ae0fe090b3d61a3501fe830e6d06785ada3ece719fa0e19f7",
+      "loss": 2.230236657335293,
+      "ppl": 9.302067221456461,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.569893921579618,
+      "response_ppl": 4.8061383391702135,
+      "response_tokens": 61467
+    },
+    {
+      "id": "dpo_mean_nll_filtered",
+      "kind": "dpo",
+      "seed": 42,
+      "checkpoint": "out/experiments/dpo_mean_nll_filtered_768.pth",
+      "length_normalize": 1,
+      "nll_weight": 0.1,
+      "data_path": "../dataset/dpo_medical_filtered.jsonl",
+      "checkpoint_sha256": "0bd2b908a34ce4fd606ed7fde2a0342f3a03fd38bcf3b1d76187512f07a3ac97",
+      "loss": 2.2292031666691923,
+      "ppl": 9.292458587879453,
+      "tokens": 82495,
+      "samples": 300,
+      "response_loss": 1.569596025293552,
+      "response_ppl": 4.80470682164112,
+      "response_tokens": 61467
+    }
+  ],
+  "sft_multiseed": {
+    "sft_base": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "loss": {
+        "mean": 2.1857005893349597,
+        "sample_std": 0.01948915010681639
+      },
+      "ppl": {
+        "mean": 8.898009665173165,
+        "sample_std": 0.17427586719490665
+      },
+      "response_loss": {
+        "mean": 1.5441014901585064,
+        "sample_std": 0.0007236174284395467
+      },
+      "response_ppl": {
+        "mean": 4.683762147654049,
+        "sample_std": 0.003389180632369889
+      }
+    },
+    "sft_neftune": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "loss": {
+        "mean": 2.1804067157794917,
+        "sample_std": 0.011380243249939795
+      },
+      "ppl": {
+        "mean": 8.850286575095517,
+        "sample_std": 0.10055767505377634
+      },
+      "response_loss": {
+        "mean": 1.5431126875943086,
+        "sample_std": 0.0008032963106340142
+      },
+      "response_ppl": {
+        "mean": 4.6791333102898225,
+        "sample_std": 0.003758244028654735
+      }
+    }
+  },
+  "paired_neftune_changes": [
+    {
+      "seed": 42,
+      "ppl_reduction_percent": 2.502374956333221,
+      "response_ppl_reduction_percent": 0.08346912706590795
+    },
+    {
+      "seed": 43,
+      "ppl_reduction_percent": -1.3023587055933734,
+      "response_ppl_reduction_percent": 0.10006713711952281
+    },
+    {
+      "seed": 44,
+      "ppl_reduction_percent": 0.3472918632815102,
+      "response_ppl_reduction_percent": 0.1129557065770661
+    }
+  ]
+}

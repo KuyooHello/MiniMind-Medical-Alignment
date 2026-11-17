@@ -17,7 +17,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
 from model.model_minimind import MiniMindConfig
 from dataset.lm_dataset import DPODataset
-from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, init_model, SkipBatchSampler
+from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, init_model, SkipBatchSampler, record_training_run
 
 warnings.filterwarnings('ignore')
 
@@ -26,34 +26,33 @@ def logits_to_log_probs(logits, labels):
     # logits shape: (batch_size, seq_len, vocab_size)
     # labels shape: (batch_size, seq_len)
     # log_probs shape: (batch_size, seq_len)
-    log_probs = F.log_softmax(logits, dim=2)
+    log_probs = F.log_softmax(logits.float(), dim=2)
     log_probs_per_token = torch.gather(log_probs, dim=2, index=labels.unsqueeze(2)).squeeze(-1)
     return log_probs_per_token
 
 
-def dpo_loss(ref_log_probs, policy_log_probs, mask, beta, nll_weight=0.1):
-    # ref_log_probs 和 policy_log_probs 都是 shape: (batch_size, seq_len)
+def dpo_loss(ref_log_probs, policy_log_probs, mask, beta, nll_weight=0.1,
+             length_normalize=True, return_metrics=False):
+    """Factorial ablation: sequence sum/mean preference scores; per-token chosen NLL."""
     seq_lengths = mask.sum(dim=1).clamp(min=1.0)
-    # 1. 长度归一化：用 token 均值代替求和，缓解小模型输出啰嗦的 Length Bias
-    ref_log_probs = (ref_log_probs * mask).sum(dim=1) / seq_lengths
-    policy_log_probs = (policy_log_probs * mask).sum(dim=1) / seq_lengths
-
-    # 2. 将 chosen 和 rejected 数据分开
-    batch_size = ref_log_probs.shape[0]
-    chosen_ref_log_probs = ref_log_probs[:batch_size // 2]
-    reject_ref_log_probs = ref_log_probs[batch_size // 2:]
-    chosen_policy_log_probs = policy_log_probs[:batch_size // 2]
-    reject_policy_log_probs = policy_log_probs[batch_size // 2:]
-
-    pi_logratios = chosen_policy_log_probs - reject_policy_log_probs
-    ref_logratios = chosen_ref_log_probs - reject_ref_log_probs
-    logits = pi_logratios - ref_logratios
-    loss = -F.logsigmoid(beta * logits)
-
-    # 3. 增量改进：叠加 chosen 序列的 NLL 正则项，防止小参数模型 DPO 训练发生似然坍塌
-    chosen_nll_loss = -chosen_policy_log_probs
-    total_loss = loss + nll_weight * chosen_nll_loss
-    return total_loss.mean()
+    ref_sum = (ref_log_probs * mask).sum(dim=1)
+    policy_sum = (policy_log_probs * mask).sum(dim=1)
+    policy_mean = policy_sum / seq_lengths
+    ref_scores = ref_sum / seq_lengths if length_normalize else ref_sum
+    policy_scores = policy_mean if length_normalize else policy_sum
+    half = ref_scores.shape[0] // 2
+    pi_logratios = policy_scores[:half] - policy_scores[half:]
+    ref_logratios = ref_scores[:half] - ref_scores[half:]
+    margin = beta * (pi_logratios - ref_logratios)
+    preference_loss = -F.logsigmoid(margin).mean()
+    # Keep the NLL scale identical across both preference-score aggregations.
+    chosen_nll = -policy_mean[:half].mean()
+    loss = preference_loss + nll_weight * chosen_nll
+    if return_metrics:
+        return loss, {"preference_loss": preference_loss, "chosen_nll": chosen_nll,
+                      "chosen_logp": policy_mean[:half].mean(), "rejected_logp": policy_mean[half:].mean(),
+                      "reward_margin": margin.mean(), "preference_accuracy": (margin > 0).float().mean()}
+    return loss
 
 
 def train_epoch(epoch, loader, iters, ref_model, lm_config, start_step=0, wandb=None, beta=0.1):
@@ -84,7 +83,9 @@ def train_epoch(epoch, loader, iters, ref_model, lm_config, start_step=0, wandb=
             logits = outputs.logits
             policy_log_probs = logits_to_log_probs(logits, y)
             
-            dpo_loss_val = dpo_loss(ref_log_probs, policy_log_probs, mask, beta=beta)
+            dpo_loss_val, loss_metrics = dpo_loss(
+                ref_log_probs, policy_log_probs, mask, beta=beta,
+                nll_weight=args.nll_weight, length_normalize=bool(args.length_normalize), return_metrics=True)
             loss = dpo_loss_val + outputs.aux_loss
             loss = loss / args.accumulation_steps
 
@@ -105,9 +106,10 @@ def train_epoch(epoch, loader, iters, ref_model, lm_config, start_step=0, wandb=
             current_lr = optimizer.param_groups[-1]['lr']
             eta_min = spend_time / max(step - start_step, 1) * (iters - step) // 60
             
-            Logger(f'Epoch:[{epoch + 1}/{args.epochs}]({step}/{iters}), loss: {current_loss:.4f}, dpo_loss: {current_dpo_loss:.4f}, aux_loss: {current_aux_loss:.4f}, learning_rate: {current_lr:.8f}, epoch_time: {eta_min:.3f}min')
+            metric_values = {key: value.item() for key, value in loss_metrics.items()}
+            Logger(f'Epoch:[{epoch + 1}/{args.epochs}]({step}/{iters}), loss: {current_loss:.4f}, dpo_loss: {current_dpo_loss:.4f}, aux_loss: {current_aux_loss:.4f}, learning_rate: {current_lr:.8f}, epoch_time: {eta_min:.3f}min, metrics: {metric_values}')
             
-            if wandb: wandb.log({"loss": current_loss, "dpo_loss": current_dpo_loss, "aux_loss": current_aux_loss, "learning_rate": current_lr, "epoch_time": eta_min})
+            if wandb: wandb.log({"loss": current_loss, "dpo_loss": current_dpo_loss, "aux_loss": current_aux_loss, "learning_rate": current_lr, "epoch_time": eta_min, **metric_values})
 
         if (step % args.save_interval == 0 or step == iters) and is_main_process():
             model.eval()
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_weight', default='dpo', type=str, help="保存权重的前缀名")
     parser.add_argument("--epochs", type=int, default=1, help="训练轮数")
     parser.add_argument("--batch_size", type=int, default=4, help="batch size")
-    parser.add_argument("--learning_rate", type=float, default=4e-8, help="初始学习率（建议<=5e-8避免遗忘）")
+    parser.add_argument("--learning_rate", type=float, default=4e-8, help="初始学习率；应结合求和/均值目标在验证集检查")
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu", help="训练设备")
     parser.add_argument("--dtype", type=str, default="bfloat16", help="混合精度类型")
     parser.add_argument("--num_workers", type=int, default=8, help="数据加载线程数")
@@ -147,6 +149,9 @@ if __name__ == "__main__":
     parser.add_argument('--from_weight', default='full_sft', type=str, help="基于哪个权重训练")
     parser.add_argument('--from_resume', default=0, type=int, choices=[0, 1], help="是否自动检测&续训（0=否，1=是）")
     parser.add_argument('--beta', default=0.15, type=float, help="DPO中的beta参数")
+    parser.add_argument('--nll_weight', default=0.1, type=float, help="chosen token 平均 NLL 权重；0 表示关闭")
+    parser.add_argument('--length_normalize', default=1, type=int, choices=[0, 1], help="偏好分数使用 token 均值（1）或序列求和（0）")
+    parser.add_argument('--seed', default=42, type=int, help="训练随机种子")
     parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-DPO", help="wandb项目名")
     parser.add_argument("--use_compile", default=0, type=int, choices=[0, 1], help="是否使用torch.compile加速（0=否，1=是）")
@@ -155,7 +160,7 @@ if __name__ == "__main__":
     # ========== 1. 初始化环境和随机种子 ==========
     local_rank = init_distributed_mode()
     if dist.is_initialized(): args.device = f"cuda:{local_rank}"
-    setup_seed(42 + (dist.get_rank() if dist.is_initialized() else 0))
+    setup_seed(args.seed + (dist.get_rank() if dist.is_initialized() else 0))
     
     # ========== 2. 配置目录、模型参数、检查ckp ==========
     os.makedirs(args.save_dir, exist_ok=True)
@@ -189,6 +194,7 @@ if __name__ == "__main__":
     train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None
     scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype == 'float16'))
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    record_training_run(args, lm_config)
     
     # ========== 6. 从ckp恢复状态 ==========
     start_epoch, start_step = 0, 0
@@ -209,7 +215,7 @@ if __name__ == "__main__":
     # ========== 8. 开始训练 ==========
     for epoch in range(start_epoch, args.epochs):
         train_sampler and train_sampler.set_epoch(epoch)
-        setup_seed(42 + epoch); indices = torch.randperm(len(train_ds)).tolist()
+        setup_seed(args.seed + epoch); indices = torch.randperm(len(train_ds)).tolist()
         skip = start_step if (epoch == start_epoch and start_step > 0) else 0
         batch_sampler = SkipBatchSampler(train_sampler or indices, args.batch_size, skip)
         loader = DataLoader(train_ds, batch_sampler=batch_sampler, num_workers=args.num_workers, pin_memory=True)
@@ -219,6 +225,7 @@ if __name__ == "__main__":
         else:
             train_epoch(epoch, loader, len(loader), ref_model, lm_config, 0, wandb, args.beta)
     
+    record_training_run(args, lm_config, completed=True)
     # ========== 9. 清理分布进程 ==========
     if dist.is_initialized():
         dist.barrier()
