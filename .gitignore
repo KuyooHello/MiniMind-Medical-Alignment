@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.DS_Store
+out
+website/
+docs-minimind/
+# Custom training artifacts & datasets
+out/*.pth
+out/ablation_eval_cases.json
+dataset/*.jsonl
+dataset/raw*/
+checkpoints/
+*.log
+__pycache__/
+
+*.safetensors
+*.bin
+minimind-3/
+scripts/minimind-3/
