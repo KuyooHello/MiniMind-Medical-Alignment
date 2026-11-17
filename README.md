@@ -6,10 +6,10 @@
 
 1. **SFT 阶段嵌入噪声正则化（NEFTune）**
    - 修改位置：`model/model_minimind.py` (`MiniMindModel.forward`) & `trainer/train_full_sft.py`
-   - 原理与实现：在训练阶段向 Token Embedding 注入缩放因子为 $\frac{\alpha}{\sqrt{L \cdot d}}$（$\alpha=5.0$）的均匀分布随机噪声，打破小参数模型对表面话术的死记硬背；同时通过配置开关实现训练阶段隔离，确保仅在 SFT 阶段生效，避免干扰 Pretrain 与 DPO 的概率分布对比。
+   - 原理与实现：在训练阶段向 Token Embedding 注入缩放因子为 $\frac{\alpha}{\sqrt{L \cdot d}}$（α = 5.0）的均匀分布随机噪声，打破小参数模型对表面话术的死记硬背；同时通过配置开关实现训练阶段隔离，确保仅在 SFT 阶段生效，避免干扰 Pretrain 与 DPO 的概率分布对比。
 2. **长度归一化 DPO + NLL 混合对齐目标**
    - 修改位置：`trainer/train_dpo.py` (`dpo_loss`)
-   - 原理与实现：针对 104M 小模型运行原生 DPO 时易发生的似然坍塌（Likelihood Displacement，`chosen` 与 `rejected` 概率同步下降引发输出乱码）问题，使用序列有效 Token 均值替代求和以消除 Length Bias，并叠加 $\lambda=0.1$ 权重的 `chosen` 序列负对数似然（NLL）正则项稳定生成流畅度。
+   - 原理与实现：针对 104M 小模型运行原生 DPO 时易发生的似然坍塌（Likelihood Displacement，`chosen` 与 `rejected` 概率同步下降引发输出乱码）问题，使用序列有效 Token 均值替代求和以消除 Length Bias，并叠加 λ = 0.1 权重的 `chosen` 序列负对数似然（NLL）正则项稳定生成流畅度。
 3. **On-Policy 偏好数据构建与批量推理加速**
    - 修改位置：`scripts/prepare_vertical_data.py`、`scripts/build_onpolicy_dpo.py`、`scripts/eval_ppl.py`、`scripts/eval_generation.py`
    - 原理与实现：基于 `full_sft_neftune` 模型在未见医疗样本上高温采样（`T=1.0`）构造 2,494 对 On-Policy 偏好数据；通过**按提问长度分桶排序 + Left-Padding 批处理 + BF16 推理**消除 CPU Dispatch 瓶颈，采样吞吐从 `2.03 it/s` 提升至 `50+ samples/s`（提速超 25 倍）。
@@ -21,7 +21,7 @@
 | Pretrain Baseline | `pretrain_768.pth` | 3.4380 | 31.13 | 104M 通用预训练基座 |
 | Full SFT (Base) | `full_sft_base_768.pth` | 2.2513 | 9.50 | 验证集 PPL 较基线大幅下降 **69.5%** |
 | Full SFT + NEFTune | `full_sft_neftune_768.pth` | **2.2488** | **9.48** | PPL 进一步微降，增强开放生成泛化性 |
-| **DPO + NLL ($\lambda=0.1$)** | `dpo_nll_768.pth` | 2.2797 | 9.77 | **50 样本盲测有效胜率 58.5%（24胜/9平/17负）**，无似然坍塌 |
+| **DPO + NLL (λ = 0.1)** | `dpo_nll_768.pth` | 2.2797 | 9.77 | **50 样本盲测有效胜率 58.5%（24胜/9平/17负）**，无似然坍塌 |
 
 ## 3. 典型生成效果对比（完整 20 组样例见 `examples/eval_cases_sample.json`）
 
