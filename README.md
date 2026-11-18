@@ -110,9 +110,14 @@ PYTHONPATH=. python scripts/plot_results.py
 python eval_llm.py --weight medical_model --hidden_size 768 \
   --num_hidden_layers 8 --max_new_tokens 220 --historys 0
 
-# 运行数据隔离、偏好目标、回复掩码与评审完整性检查
+# 运行数据隔离、偏好目标、回复掩码、KV Cache 与评审完整性检查
 PYTHONPATH=. python -m unittest discover -s tests -v
+
+# 使用当前 SFT / DPO 权重比较完整前向、缓存续写和贪心生成
+PYTHONPATH=. python scripts/check_kv_cache.py --device cpu --dtype float32
 ```
+
+KV Cache 测试覆盖逐 token 续写、分块续写、左填充批量输入、缓存复用和贪心生成，并检查缓存长度及内容。实际权重的 CPU FP32 检查使用 `atol=1e-4`、`rtol=1e-5`，记录见 [kv_cache_consistency.json](results/kv_cache_consistency.json)。
 
 如需后续人工 A/B 评审，可运行 `scripts/blind_review.py prepare`，随机化模型顺序后填写全部判断，再运行 `summarize`；脚本检查答案内容、样本完整性和来源记录，分别报告排除平局与平局计半分的统计。
 
@@ -129,6 +134,7 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 | `scripts/run_experiments.py` | 执行配置中的训练矩阵并记录完成状态 |
 | `scripts/evaluate_experiments.py` | 验证集选择、统一测试与多种子汇总 |
 | `scripts/eval_ppl.py` | 全对话及 assistant 回复的 token 加权 NLL/PPL |
+| `scripts/check_kv_cache.py` | 完整前向与缓存前向的 logits、缓存结构及贪心生成一致性检查 |
 
 项目用于微调与对齐研究，未进行临床验证。
 

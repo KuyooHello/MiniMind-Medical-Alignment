@@ -91,7 +91,12 @@ python eval_llm.py --weight medical_model --hidden_size 768 \
 
 # Integrity and objective checks
 PYTHONPATH=. python -m unittest discover -s tests -v
+
+# Full-forward, cached-forward, and greedy-generation checks on SFT / DPO weights
+PYTHONPATH=. python scripts/check_kv_cache.py --device cpu --dtype float32
 ```
+
+KV Cache tests cover tokenwise and chunked continuation, left-padded batches, cache reuse, and greedy generation, including cache length and content checks. Actual-checkpoint CPU FP32 checks use `atol=1e-4` and `rtol=1e-5`; results are recorded in [kv_cache_consistency.json](results/kv_cache_consistency.json).
 
 Skip data preparation when the verified split already exists. Scripts automatically check data, checkpoint, and review-record consistency. A data/review mismatch requires a new review. Running the audit without `--semantic-review` applies rules alone and is recorded as a separate data condition. Completed experiments are reused when their settings, data, and checkpoints match.
 

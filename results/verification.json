@@ -1,7 +1,7 @@
 {
   "unit_tests": {
     "command": "PYTHONPATH=. python -m unittest discover -s tests -v",
-    "passed": 29,
+    "passed": 35,
     "failed": 0
   },
   "real_checkpoint_batch_consistency": {
@@ -24,6 +24,15 @@
     "tests/test_blind_review.py": "7175a6c0410dd3a7db120823acfcc5d7f0d36b51f24c192a5eabaa444f045fb7",
     "tests/test_data_splits.py": "d7c079e9eab3d6387cf6ce3dede22c5aed0633d34c232f23a3cd0d648cb79aff",
     "tests/test_experiment_runner.py": "11d6b58c18ba7e9c39d6fb2bbc141e873236225b5ee0e50e6281377b882a612a",
+    "tests/test_kv_cache.py": "c10919efe69bb06f1c2589f8901351d057f0b8d5776f91e5256b7685204ff177",
     "tests/test_preference_audit.py": "1b32a0cf1ad6a6ced75f4c5c59a8df728a7f39279d3d5df16c539f4a4a0f3ea4"
+  },
+  "kv_cache": {
+    "report": "results/kv_cache_consistency.json",
+    "report_sha256": "f005244ea621be814c5e154bf1bf5efe7d8dd5dd51fca66a50cc2b72da03725f",
+    "device": "cpu",
+    "dtype": "float32",
+    "checkpoints_checked": 2,
+    "passed": true
   }
 }

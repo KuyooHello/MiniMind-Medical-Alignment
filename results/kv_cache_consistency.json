@@ -1,0 +1,78 @@
+{
+  "device": "cpu",
+  "dtype": "float32",
+  "atol": 0.0001,
+  "rtol": 1e-05,
+  "torch_version": "2.14.1+cu130",
+  "batch_size": 3,
+  "padding_side": "left",
+  "precision_note": "Model RMSNorm and attention softmax retain FP32 intermediates.",
+  "input_policy": "Fixed prompts and teacher-forced token IDs; EOS stopping disabled only for fixed-length greedy comparison.",
+  "passed": true,
+  "results": [
+    {
+      "checkpoint": "out/medical_model_768.pth",
+      "checkpoint_sha256": "003d86879cf082c2547e0a893c2b5045f0c09cc8c1467e3dcea6f1241df8bf6f",
+      "single_token_continuation": {
+        "chunk_sizes": [
+          27,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "compared_tokens": 88,
+        "max_absolute_logit_error": 2.8133392333984375e-05,
+        "cache_shape_checked": true
+      },
+      "chunked_continuation": {
+        "chunk_sizes": [
+          27,
+          2,
+          4
+        ],
+        "compared_tokens": 88,
+        "max_absolute_logit_error": 2.562999725341797e-05,
+        "cache_shape_checked": true
+      },
+      "greedy_generation": {
+        "max_new_tokens": 6,
+        "generated_tokens_equal": true
+      }
+    },
+    {
+      "checkpoint": "out/medical_dpo_768.pth",
+      "checkpoint_sha256": "0bd2b908a34ce4fd606ed7fde2a0342f3a03fd38bcf3b1d76187512f07a3ac97",
+      "single_token_continuation": {
+        "chunk_sizes": [
+          27,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "compared_tokens": 88,
+        "max_absolute_logit_error": 3.0517578125e-05,
+        "cache_shape_checked": true
+      },
+      "chunked_continuation": {
+        "chunk_sizes": [
+          27,
+          2,
+          4
+        ],
+        "compared_tokens": 88,
+        "max_absolute_logit_error": 2.8312206268310547e-05,
+        "cache_shape_checked": true
+      },
+      "greedy_generation": {
+        "max_new_tokens": 6,
+        "generated_tokens_equal": true
+      }
+    }
+  ]
+}
