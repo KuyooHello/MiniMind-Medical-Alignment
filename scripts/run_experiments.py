@@ -16,10 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "out/experiments"
 
 
-def train(name, script, settings, extra=None):
-    OUT.mkdir(parents=True, exist_ok=True)
-    checkpoint = OUT / f"{name}_768.pth"
-    metadata = OUT / f"{name}_768.training.json"
+def train(name, script, settings, extra=None, output_dir=None):
+    directory = Path(output_dir) if output_dir is not None else OUT
+    directory.mkdir(parents=True, exist_ok=True)
+    checkpoint = directory / f"{name}_768.pth"
+    metadata = directory / f"{name}_768.training.json"
     if checkpoint.exists():
         if not metadata.exists() or not json.loads(metadata.read_text()).get("completed"):
             raise RuntimeError(f"未完成的训练输出已存在: {checkpoint}")
@@ -34,15 +35,15 @@ def train(name, script, settings, extra=None):
             raise RuntimeError(f"已完成训练的数据发生变化: {name}")
         print(f"SKIP completed {name}", flush=True)
         return
-    command = [sys.executable, "-u", script, "--save_dir", "../out/experiments",
+    command = [sys.executable, "-u", script, "--save_dir", os.path.relpath(directory, ROOT / 'trainer'),
                "--save_weight", name, "--hidden_size", "768", "--num_hidden_layers", "8",
-               "--max_seq_len", "512", "--num_workers", "8", "--log_interval", "100",
+               "--max_seq_len", "512", "--num_workers", "8",
                "--save_interval", "100000"]
     for key, value in {**settings, **(extra or {})}.items():
         command.extend([f"--{key}", str(value)])
-    log_path = OUT / f"{name}.log"
+    log_path = directory / f"{name}.log"
     start = time.time()
-    write_json(OUT / f"{name}.command.json", {"cwd": "trainer", "command": command,
+    write_json(directory / f"{name}.command.json", {"cwd": "trainer", "command": command,
                                             "start_unix": start})
     print(f"START {name}; log={log_path}", flush=True)
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TOKENIZERS_PARALLELISM="false",

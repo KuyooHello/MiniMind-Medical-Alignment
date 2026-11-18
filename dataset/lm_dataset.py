@@ -123,10 +123,11 @@ class SFTDataset(Dataset):
 
 
 class DPODataset(Dataset):
-    def __init__(self, file_path, tokenizer, max_length=4096):
+    def __init__(self, file_path, tokenizer, max_length=4096, remove_empty_think=None):
         super().__init__()
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.remove_empty_think = remove_empty_think
         self.padding = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
         self.bos_id = tokenizer(f'{tokenizer.bos_token}assistant\n', add_special_tokens=False).input_ids
         self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids
@@ -146,7 +147,8 @@ class DPODataset(Dataset):
         rejected_prompt = self.tokenizer.apply_chat_template(
             rejected, tokenize=False, add_generation_prompt=False
         )
-        remove_empty_think = random.random() > 0.2
+        remove_empty_think = (random.random() > 0.2 if self.remove_empty_think is None
+                              else self.remove_empty_think)
         chosen_prompt = post_processing_chat(chosen_prompt, remove_empty_think=remove_empty_think)
         rejected_prompt = post_processing_chat(rejected_prompt, remove_empty_think=remove_empty_think)
         chosen_encoding = self.tokenizer(

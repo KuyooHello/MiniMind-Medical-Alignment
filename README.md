@@ -43,11 +43,31 @@ PPL 越低，模型对参考文本的拟合越好；**PPL 不等于医学正确�
 | 均值 DPO + NLL | 0.1 | 2,498 | 9.3796 | 4.9911 |
 | 均值 DPO + NLL，过滤数据 | 0.1 | 2,450 | 9.3737 | 4.9908 |
 
-在本轮固定配置下，均值 DPO 加入 NLL 后，回复 PPL 从 3,304,363.0095 降至 4.9911；过滤数据后为 4.9908。表中各组 DPO 的回复 PPL 均高于 NEFTune SFT 的 4.8449。
+上述测试集结果中，均值 DPO 加入 NLL 后，回复 PPL 从 3,304,363.0095 降至 4.9911；过滤数据后为 4.9908。表中各组 DPO 的回复 PPL 均高于 NEFTune SFT 的 4.8449。
 
 默认推理权重 `medical_model_768.pth` 由验证集选为 **NEFTune SFT，seed 42**；DPO 对照 `medical_dpo_768.pth` 为过滤数据的均值 DPO + NLL。选择记录见 [验证集结果](results/validation.json) 与 [选择依据](results/selection.json)，测试集没有参与选择。
 
 图中的训练曲线来自实际日志中的稀疏 minibatch 统计，不代表整轮平均值；原始数值见 [training_metrics.csv](results/training_metrics.csv)。[20 条生成样例](examples/eval_cases_sample.json) 由固定随机抽样得到，完整保留错误与截断输出，未用于报告胜率。
+
+### DPO 训练诊断
+
+[诊断配置](configs/dpo_diagnostics.json) 固定同一初始 SFT 权重、数据与超参数，覆盖四组目标消融和过滤数据对照。JSONL 日志记录每 20 步窗口均值及整轮汇总；固定探针每 100 步及每轮末评测同一批 32 对训练样本，使用 FP32、eval 模式并移除空思考标签。
+
+记录包括两侧及参考模型的 NLL、逐 token／序列 log probability 变化、reward margin、相对偏好排序、梯度裁剪前后范数与裁剪比例，以及 teacher-forced token KL。KL 为诊断量；训练目标由偏好项与设定权重的 chosen NLL 构成。
+
+| 目标 | Probe Chosen NLL | Probe Rejected NLL | 验证集回复 PPL |
+| :--- | ---: | ---: | ---: |
+| 初始 NEFTune SFT | 1.3572 | 1.0918 | 4.6800 |
+| 求和 DPO | 1.5412 | 1.5774 | 5.5625 |
+| 均值 DPO | 16.5532 | 23.5017 | 2,459,034.5898 |
+| 求和 DPO + NLL | 1.4263 | 1.4089 | 5.1041 |
+| 均值 DPO + NLL | 1.3231 | 1.2233 | 4.8059 |
+| 均值 DPO + NLL，过滤数据 | 1.3259 | 1.2162 | 4.8047 |
+
+Probe NLL 为固定训练对上的逐样本平均；验证 PPL 使用相同的 300 条验证样本，按有效回复 token 加权计算。五组运行的 Prompt、Mask、EOS 异常及非有限损失计数均为 0。纯均值组的 Probe Chosen token KL 最终为 11.9253，均值 + NLL 组为 0.0456。
+
+[完整诊断与参数比较](results/dpo_diagnostics.json) · [逐窗口／探针指标](results/dpo_diagnostic_metrics.csv) · [诊断曲线](images/dpo_diagnostics.png)
+
 
 ## 数据与偏好质量
 
@@ -115,9 +135,15 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 
 # 使用当前 SFT / DPO 权重比较完整前向、缓存续写和贪心生成
 PYTHONPATH=. python scripts/check_kv_cache.py --device cpu --dtype float32
+
+# 记录完整诊断并重跑固定 DPO 对照，再绘制轨迹
+PYTHONPATH=. python scripts/run_dpo_diagnostics.py
+PYTHONPATH=. python scripts/plot_dpo_diagnostics.py
 ```
 
 KV Cache 测试覆盖逐 token 续写、分块续写、左填充批量输入、缓存复用和贪心生成，并检查缓存长度及内容。实际权重的 CPU FP32 检查使用 `atol=1e-4`、`rtol=1e-5`，记录见 [kv_cache_consistency.json](results/kv_cache_consistency.json)。
+
+诊断配置绑定本次输入文件；更换数据或初始权重时，应按实际文件更新配置中的校验记录。
 
 如需后续人工 A/B 评审，可运行 `scripts/blind_review.py prepare`，随机化模型顺序后填写全部判断，再运行 `summarize`；脚本检查答案内容、样本完整性和来源记录，分别报告排除平局与平局计半分的统计。
 
@@ -127,11 +153,13 @@ KV Cache 测试覆盖逐 token 续写、分块续写、左填充批量输入、�
 | :--- | :--- |
 | `model/model_minimind.py` | MiniMind 模型与训练态 NEFTune 嵌入噪声 |
 | `trainer/train_full_sft.py` | 普通 SFT / NEFTune 开关与训练记录 |
+| `trainer/dpo_diagnostics.py` | 窗口汇总、固定样本探针、数据约束与条件 token KL |
 | `trainer/train_dpo.py` | 求和／均值偏好分数、独立 NLL 权重、FP32 log-softmax 与诊断指标 |
 | `scripts/data_splits.py` | 问题规范化、分组划分、文件一致性与交集验证 |
 | `scripts/build_onpolicy_dpo.py` | 训练集内偏好采样与批量生成 |
 | `scripts/audit_preferences.py` | 规则过滤、固定抽样与审阅重放 |
 | `scripts/run_experiments.py` | 执行配置中的训练矩阵并记录完成状态 |
+| `scripts/run_dpo_diagnostics.py` | 固定 DPO 诊断矩阵、验证集评测与参数比较 |
 | `scripts/evaluate_experiments.py` | 验证集选择、统一测试与多种子汇总 |
 | `scripts/eval_ppl.py` | 全对话及 assistant 回复的 token 加权 NLL/PPL |
 | `scripts/check_kv_cache.py` | 完整前向与缓存前向的 logits、缓存结构及贪心生成一致性检查 |

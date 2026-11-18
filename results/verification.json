@@ -1,7 +1,7 @@
 {
   "unit_tests": {
     "command": "PYTHONPATH=. python -m unittest discover -s tests -v",
-    "passed": 35,
+    "passed": 41,
     "failed": 0
   },
   "real_checkpoint_batch_consistency": {
@@ -23,6 +23,7 @@
     "tests/test_alignment_objectives.py": "574ab3b2f89128e073ec7d6915327d4a147d167bbfcb08c67184b4f1a638484c",
     "tests/test_blind_review.py": "7175a6c0410dd3a7db120823acfcc5d7f0d36b51f24c192a5eabaa444f045fb7",
     "tests/test_data_splits.py": "d7c079e9eab3d6387cf6ce3dede22c5aed0633d34c232f23a3cd0d648cb79aff",
+    "tests/test_dpo_diagnostics.py": "88e016c9beab4904f0f3ccaa0ee7abfec54c722dd7fa68d0f830e2b3ac890ec8",
     "tests/test_experiment_runner.py": "11d6b58c18ba7e9c39d6fb2bbc141e873236225b5ee0e50e6281377b882a612a",
     "tests/test_kv_cache.py": "c10919efe69bb06f1c2589f8901351d057f0b8d5776f91e5256b7685204ff177",
     "tests/test_preference_audit.py": "1b32a0cf1ad6a6ced75f4c5c59a8df728a7f39279d3d5df16c539f4a4a0f3ea4"
@@ -34,5 +35,18 @@
     "dtype": "float32",
     "checkpoints_checked": 2,
     "passed": true
+  },
+  "dpo_diagnostics": {
+    "report": "results/dpo_diagnostics.json",
+    "report_sha256": "9d204b6050e8c404cbd51dcd1300ee8f15ff557051a35e5cff284abe27614be5",
+    "training_runs_completed": 5,
+    "epochs_per_run": 2,
+    "validation_samples": 300,
+    "shared_fixed_probe_pairs": 32,
+    "initial_policy_reference_equal": true,
+    "reference_probe_nll_stable": true,
+    "all_health_counts_zero": true,
+    "test_set_evaluated": false,
+    "loss_gradient_regression_cases_passed": 8
   }
 }

@@ -1,0 +1,34 @@
+{
+  "purpose": "Same-configuration diagnostic replication of the DPO objective matrix.",
+  "output_dir": "out/dpo_diagnostics",
+  "split_dir": "dataset/medical",
+  "validation_samples": 300,
+  "initial_checkpoint": "out/medical_sft_neftune_768.pth",
+  "initial_checkpoint_sha256": "003d86879cf082c2547e0a893c2b5045f0c09cc8c1467e3dcea6f1241df8bf6f",
+  "data_sha256": {
+    "dataset/dpo_medical.jsonl": "e3182342cab9313b529e1fa36c76381e06c8ad3a7907cde263c888c8c15c1668",
+    "dataset/dpo_medical_filtered.jsonl": "4bacd06a772e4a953c443215bc5a1ad47502757a64bbecb879c5020452de0577"
+  },
+  "settings": {
+    "data_path": "../dataset/dpo_medical.jsonl",
+    "from_weight": "medical_sft_neftune",
+    "epochs": 2,
+    "batch_size": 8,
+    "learning_rate": 0.000002,
+    "seed": 42,
+    "beta": 0.15,
+    "log_interval": 20,
+    "diagnostic_kl": 1,
+    "probe_samples": 32,
+    "probe_interval": 100,
+    "probe_seed": 73
+  },
+  "variants": [
+    {"name": "diag_dpo_sum", "previous": "dpo_sum", "overrides": {"length_normalize": 0, "nll_weight": 0}},
+    {"name": "diag_dpo_mean", "previous": "dpo_mean", "overrides": {"length_normalize": 1, "nll_weight": 0}},
+    {"name": "diag_dpo_sum_nll", "previous": "dpo_sum_nll", "overrides": {"length_normalize": 0, "nll_weight": 0.1}},
+    {"name": "diag_dpo_mean_nll", "previous": "dpo_mean_nll", "overrides": {"length_normalize": 1, "nll_weight": 0.1}},
+    {"name": "diag_dpo_mean_nll_filtered", "previous": "dpo_mean_nll_filtered", "overrides": {
+      "length_normalize": 1, "nll_weight": 0.1, "data_path": "../dataset/dpo_medical_filtered.jsonl"}}
+  ]
+}

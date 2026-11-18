@@ -74,15 +74,17 @@ def record_training_run(args, config, completed=False):
     output = Path(args.save_dir) / f'{args.save_weight}_{config.hidden_size}{suffix}.training.json'
     initial = Path('../out') / f'{args.from_weight}_{config.hidden_size}{suffix}.pth'
     source_root = Path(__file__).resolve().parents[1]
+    source_paths = [source_root / 'model/model_minimind.py', source_root / 'dataset/lm_dataset.py',
+                    source_root / ('trainer/train_dpo.py' if hasattr(args, 'beta') else 'trainer/train_full_sft.py')]
+    if hasattr(args, 'beta'):
+        source_paths.append(source_root / 'trainer/dpo_diagnostics.py')
     payload = {
         'completed': completed, 'settings': vars(args), 'model_config': config.to_dict(),
         'data_sha256': sha256_file(args.data_path),
         'initial_checkpoint_sha256': sha256_file(initial) if initial.is_file() else None,
         'torch_version': torch.__version__,
         'gpu': torch.cuda.get_device_name() if str(args.device).startswith('cuda') else None,
-        'source_sha256': {str(path.relative_to(source_root)): sha256_file(path) for path in
-                          [source_root / 'model/model_minimind.py', source_root / 'dataset/lm_dataset.py',
-                           source_root / ('trainer/train_dpo.py' if hasattr(args, 'beta') else 'trainer/train_full_sft.py')]},
+        'source_sha256': {str(path.relative_to(source_root)): sha256_file(path) for path in source_paths},
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

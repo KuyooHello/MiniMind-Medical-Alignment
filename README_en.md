@@ -43,11 +43,31 @@ Across the three seeds, NEFTune lowers response PPL in two runs and raises it in
 | Mean DPO + NLL | 0.1 | 2,498 | 9.3796 | 4.9911 |
 | Mean DPO + NLL, filtered | 0.1 | 2,450 | 9.3737 | 4.9908 |
 
-Under the fixed configuration, adding NLL to mean DPO lowers response PPL from 3,304,363.0095 to 4.9911; the filtered-data run scores 4.9908. Every DPO variant in the table has higher response PPL than NEFTune SFT at 4.8449.
+On the test set, adding NLL to mean DPO lowers response PPL from 3,304,363.0095 to 4.9911; the filtered-data run scores 4.9908. Every DPO variant in the table has higher response PPL than NEFTune SFT at 4.8449.
 
 Validation selects **seed-42 NEFTune SFT** as `medical_model_768.pth`. The best validation DPO variant, filtered mean DPO + NLL, is available locally as `medical_dpo_768.pth`. See [validation results](results/validation.json) and [selection](results/selection.json). Test scores do not change the selection.
 
 Training curves show sparse logged minibatches rather than epoch averages; values are in [training_metrics.csv](results/training_metrics.csv). The [20 fixed random generation examples](examples/eval_cases_sample.json) retain errors and truncated outputs. They are not used to report a win rate.
+
+### DPO training diagnostics
+
+The [diagnostic configuration](configs/dpo_diagnostics.json) fixes the initial SFT checkpoint, data, and hyperparameters across the four objective variants and the filtered-data control. Structured logs contain 20-step window means and epoch summaries. Fixed probes evaluate the same 32 training pairs every 100 steps and at epoch ends, using FP32, eval mode, and fixed empty-think removal.
+
+Diagnostics include policy/reference NLL, token-mean and sequence-sum log-probability changes, reward margins, relative preference ordering, gradient norms before/after clipping and clipping fractions, and teacher-forced conditional token KL. KL is recorded as a diagnostic; the training objective comprises the preference term and the configured chosen NLL term.
+
+| Objective | Probe chosen NLL | Probe rejected NLL | Validation response PPL |
+| :--- | ---: | ---: | ---: |
+| Initial NEFTune SFT | 1.3572 | 1.0918 | 4.6800 |
+| Sum DPO | 1.5412 | 1.5774 | 5.5625 |
+| Mean DPO | 16.5532 | 23.5017 | 2,459,034.5898 |
+| Sum DPO + NLL | 1.4263 | 1.4089 | 5.1041 |
+| Mean DPO + NLL | 1.3231 | 1.2233 | 4.8059 |
+| Mean DPO + NLL, filtered | 1.3259 | 1.2162 | 4.8047 |
+
+Probe NLL averages per-sequence response-token means on the fixed training pairs. Validation PPL uses the same 300 validation examples with response-token weighting. All five runs record zero prompt/mask/EOS violations and nonfinite losses. Final chosen-context token KL is 11.9253 for mean DPO and 0.0456 for mean DPO + NLL.
+
+[Diagnostics and parameter comparison](results/dpo_diagnostics.json) · [Window/probe metrics](results/dpo_diagnostic_metrics.csv) · [Diagnostic curves](images/dpo_diagnostics.png)
+
 
 ## Data and preference quality
 
@@ -94,9 +114,15 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 
 # Full-forward, cached-forward, and greedy-generation checks on SFT / DPO weights
 PYTHONPATH=. python scripts/check_kv_cache.py --device cpu --dtype float32
+
+# Run the fixed DPO diagnostic matrix and render its traces
+PYTHONPATH=. python scripts/run_dpo_diagnostics.py
+PYTHONPATH=. python scripts/plot_dpo_diagnostics.py
 ```
 
 KV Cache tests cover tokenwise and chunked continuation, left-padded batches, cache reuse, and greedy generation, including cache length and content checks. Actual-checkpoint CPU FP32 checks use `atol=1e-4` and `rtol=1e-5`; results are recorded in [kv_cache_consistency.json](results/kv_cache_consistency.json).
+
+The diagnostic configuration binds to the recorded inputs. Update its input fingerprints when using different data or initial weights.
 
 Skip data preparation when the verified split already exists. Scripts automatically check data, checkpoint, and review-record consistency. A data/review mismatch requires a new review. Running the audit without `--semantic-review` applies rules alone and is recorded as a separate data condition. Completed experiments are reused when their settings, data, and checkpoints match.
 
