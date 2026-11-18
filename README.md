@@ -30,7 +30,7 @@ PPL 越低，模型对参考文本的拟合越好；**PPL 不等于医学正确�
 | 普通 SFT，3 seeds | 8.96153 ± 0.16667 | 4.84430 ± 0.00080 |
 | NEFTune，3 seeds | 8.92699 ± 0.10205 | 4.84461 ± 0.00190 |
 
-NEFTune 的平均全对话 PPL 略低，但回复 PPL 的变化很小、方向不一致；这三次实验不足以支持稳定提升的结论。
+三个随机种子中，NEFTune 的回复 PPL 两次降低、一次升高；均值与样本标准差见上表。
 
 | 固定 seed-42 对照 | NLL 权重 | 偏好对数 | 全对话 PPL | 回复 PPL |
 | :--- | ---: | ---: | ---: | ---: |
@@ -43,7 +43,7 @@ NEFTune 的平均全对话 PPL 略低，但回复 PPL 的变化很小、方向�
 | 均值 DPO + NLL | 0.1 | 2,498 | 9.3796 | 4.9911 |
 | 均值 DPO + NLL，过滤数据 | 0.1 | 2,450 | 9.3737 | 4.9908 |
 
-在本轮固定超参数下，均值 DPO 未加 NLL 时出现明显的似然退化，chosen NLL 的训练记录也显示同一现象；加入 NLL 后缓解。过滤数据的变化很小，所有 DPO 的回复 PPL 仍高于 SFT。求和与均值目标的梯度尺度不同，本实验没有分别搜索最优 β 和学习率，因此不能据此判断两类目标各自充分调参后的优劣。
+在本轮固定配置下，均值 DPO 加入 NLL 后，回复 PPL 从 3,304,363.0095 降至 4.9911；过滤数据后为 4.9908。表中各组 DPO 的回复 PPL 均高于 NEFTune SFT 的 4.8449。
 
 默认推理权重 `medical_model_768.pth` 由验证集选为 **NEFTune SFT，seed 42**；DPO 对照 `medical_dpo_768.pth` 为过滤数据的均值 DPO + NLL。选择记录见 [验证集结果](results/validation.json) 与 [选择依据](results/selection.json)，测试集没有参与选择。
 
@@ -55,7 +55,7 @@ NEFTune 的平均全对话 PPL 略低，但回复 PPL 的变化很小、方向�
 
 偏好对使用训练集参考答案作 chosen、SFT 采样答案作 rejected，属于**弱标注**。全量规则检查删除 23 条依赖缺失图片的样本；在审阅前按固定种子均匀随机抽取 50 对作模型语义审阅，得到参考答案相对更好 36 对、采样答案相对更好 4 对、不确定 10 对。参考答案存在主要问题、标签反转或无法确定的已审样本予以排除，不翻转标签。规则与抽样审阅合计删除 48 对，保留 2,450 对。
 
-[审阅判断](results/preference_sample_review.json) 和 [过滤摘要](results/preference_quality.json) 可追溯到原始偏好数据 SHA-256。本次没有独立医学专家标签；抽样审阅不能证明其余数据的标签正确，也不构成临床质量认证。检查覆盖规范化后的精确问题重复，尚未排除语义近重复、同一患者不同问法或基座预训练污染。
+[审阅判断](results/preference_sample_review.json) 和 [过滤摘要](results/preference_quality.json) 保存逐条记录与统计。本次采用模型语义审阅，未进行独立医学专家复核；数据隔离检查范围为规范化后的首个用户问题的精确重复。
 
 ## 复现
 
@@ -65,10 +65,10 @@ NEFTune 的平均全对话 PPL 略低，但回复 PPL 的变化很小、方向�
 pip install -r requirements-train.txt
 ```
 
-准备以下输入，数据来源、哈希和文件格式见 [dataset/dataset.md](dataset/dataset.md)：
+准备以下输入，数据来源和文件格式见 [dataset/dataset.md](dataset/dataset.md)：
 
 - 医疗 JSONL：`dataset/raw/FreedomIntelligence/HuatuoGPT-sft-data-v1/HuatuoGPT_sft_data_v1.jsonl`。
-- MiniMind 预训练权重：`out/pretrain_768.pth`，来源为 [MiniMind 权重仓库](https://huggingface.co/jingyaogong/minimind-3-pytorch)。本次使用的 SHA-256 已记录，不同权重应作为新的实验。
+- MiniMind 预训练权重：`out/pretrain_768.pth`，来源为 [MiniMind 权重仓库](https://huggingface.co/jingyaogong/minimind-3-pytorch)。
 - tokenizer：仓库内 `model/` 文件。
 
 ```bash
@@ -83,7 +83,7 @@ PYTHONPATH=. python scripts/run_experiments.py --stage sft
 PYTHONPATH=. python scripts/build_onpolicy_dpo.py
 PYTHONPATH=. python scripts/check_data_leakage.py --dpo-path dataset/dpo_medical.jsonl
 
-# 重放与原始偏好数据哈希绑定的抽样审阅，并生成过滤数据
+# 重放对应数据的抽样审阅，并生成过滤数据
 PYTHONPATH=. python scripts/audit_preferences.py \
   --semantic-review results/preference_sample_review.json
 
@@ -101,7 +101,7 @@ pip install -r requirements-report.txt
 PYTHONPATH=. python scripts/plot_results.py
 ```
 
-采样结果可能随硬件、PyTorch 或权重变化。抽样审阅仅适用于其绑定的数据哈希；若脚本提示哈希不符，需要重新审阅当前样本，不能直接套用本次标签。规则过滤可不带 `--semantic-review` 单独执行，但属于另一组数据条件，须单独记录和比较。训练器会记录参数、输入与输出哈希；已经完成的实验只有在参数、数据与权重一致时才会跳过。
+脚本自动校验数据、权重与审阅记录的一致性。若提示数据与审阅记录不匹配，需要重新审阅当前样本。规则过滤可不带 `--semantic-review` 单独执行，作为单独的数据条件记录。训练器保存运行参数与校验记录；已经完成且参数、数据、权重一致的实验会跳过。
 
 数据、完整训练权重和运行日志保存在本地，不随 Git 提交；公开仓库包含配置、结果、摘要、图和固定生成样例。完整上游功能和可选依赖见 [README_upstream.md](README_upstream.md) 与 `requirements.txt`。
 
@@ -123,14 +123,14 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 | `model/model_minimind.py` | MiniMind 模型与训练态 NEFTune 嵌入噪声 |
 | `trainer/train_full_sft.py` | 普通 SFT / NEFTune 开关与训练记录 |
 | `trainer/train_dpo.py` | 求和／均值偏好分数、独立 NLL 权重、FP32 log-softmax 与诊断指标 |
-| `scripts/data_splits.py` | 问题规范化、分组划分、文件哈希与交集验证 |
+| `scripts/data_splits.py` | 问题规范化、分组划分、文件一致性与交集验证 |
 | `scripts/build_onpolicy_dpo.py` | 训练集内偏好采样与批量生成 |
 | `scripts/audit_preferences.py` | 规则过滤、固定抽样与审阅重放 |
 | `scripts/run_experiments.py` | 执行配置中的训练矩阵并记录完成状态 |
 | `scripts/evaluate_experiments.py` | 验证集选择、统一测试与多种子汇总 |
 | `scripts/eval_ppl.py` | 全对话及 assistant 回复的 token 加权 NLL/PPL |
 
-项目用于微调与对齐研究。生成样例中可见严重医学事实错误，当前结果不支持临床使用，也没有独立人工评测支持“医疗能力提升”或“DPO 胜率提升”的结论。
+项目用于微调与对齐研究，未进行临床验证。
 
 ## 来源与许可
 

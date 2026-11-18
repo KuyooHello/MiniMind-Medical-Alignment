@@ -30,7 +30,7 @@ Lower PPL indicates better likelihood of the reference text, **not medical accur
 | Baseline, 3 seeds | 8.96153 ± 0.16667 | 4.84430 ± 0.00080 |
 | NEFTune, 3 seeds | 8.92699 ± 0.10205 | 4.84461 ± 0.00190 |
 
-NEFTune slightly lowers mean full-conversation PPL. Response-PPL changes are small and inconsistent across seeds; these runs do not establish a stable benefit.
+Across the three seeds, NEFTune lowers response PPL in two runs and raises it in one. The table reports the mean and sample standard deviation.
 
 | Seed-42 comparison | NLL weight | Preference pairs | Full PPL | Response PPL |
 | :--- | ---: | ---: | ---: | ---: |
@@ -43,7 +43,7 @@ NEFTune slightly lowers mean full-conversation PPL. Response-PPL changes are sma
 | Mean DPO + NLL | 0.1 | 2,498 | 9.3796 | 4.9911 |
 | Mean DPO + NLL, filtered | 0.1 | 2,450 | 9.3737 | 4.9908 |
 
-Under these fixed hyperparameters, mean DPO without NLL suffers substantial likelihood degradation, also visible in logged chosen NLL. Adding NLL mitigates this behavior. Filtering produces only a small change, and no DPO variant beats SFT on response PPL. Sum and mean objectives have different gradient scales; separate β/learning-rate searches were not performed, so these results do not rank the optimally tuned methods.
+Under the fixed configuration, adding NLL to mean DPO lowers response PPL from 3,304,363.0095 to 4.9911; the filtered-data run scores 4.9908. Every DPO variant in the table has higher response PPL than NEFTune SFT at 4.8449.
 
 Validation selects **seed-42 NEFTune SFT** as `medical_model_768.pth`. The best validation DPO variant, filtered mean DPO + NLL, is available locally as `medical_dpo_768.pth`. See [validation results](results/validation.json) and [selection](results/selection.json). Test scores do not change the selection.
 
@@ -55,7 +55,7 @@ The source is [HuatuoGPT-sft-data-v1](https://huggingface.co/datasets/FreedomInt
 
 Training reference answers are designated chosen and SFT generations rejected: these are **weak labels**. Rules remove 23 pairs requiring unavailable images. A uniform random sample of 50 pairs, fixed before inspection, receives model semantic review: 36 favor the reference, 4 the sampled response, and 10 are uncertain. Reviewed pairs with uncertain/reversed preferences or major reference problems are removed without label flipping. Rules and sampled review remove 48 pairs in total, retaining 2,450.
 
-[Item-level judgments](results/preference_sample_review.json) and the [quality summary](results/preference_quality.json) bind to the input SHA-256. There are no independent medical-expert labels. Sample review does not certify the remaining labels or clinical correctness. Exact normalized-question isolation does not rule out semantic near-duplicates, multiple questions from the same patient, or contamination in pretraining.
+[Item-level judgments](results/preference_sample_review.json) and the [quality summary](results/preference_quality.json) record the review decisions and counts. Review uses a model, without independent medical-expert review. Isolation checks cover exact matches of normalized first-user questions.
 
 ## Reproduction
 
@@ -65,7 +65,7 @@ Run from the repository root, preferably with Python 3.10 and a GPU-compatible P
 pip install -r requirements-train.txt
 ```
 
-Prepare the medical JSONL at `dataset/raw/FreedomIntelligence/HuatuoGPT-sft-data-v1/HuatuoGPT_sft_data_v1.jsonl`, and MiniMind pretrained weights at `out/pretrain_768.pth`. The tokenizer is included under `model/`. See [data preparation](dataset/dataset.md), [upstream weights](https://huggingface.co/jingyaogong/minimind-3-pytorch), and [input/environment hashes](results/environment.json).
+Prepare the medical JSONL at `dataset/raw/FreedomIntelligence/HuatuoGPT-sft-data-v1/HuatuoGPT_sft_data_v1.jsonl`, and MiniMind pretrained weights at `out/pretrain_768.pth`. The tokenizer is included under `model/`. See [data preparation](dataset/dataset.md), [upstream weights](https://huggingface.co/jingyaogong/minimind-3-pytorch), and the [environment record](results/environment.json).
 
 ```bash
 PYTHONPATH=. python scripts/prepare_vertical_data.py --fresh-test-size 1000
@@ -93,11 +93,11 @@ python eval_llm.py --weight medical_model --hidden_size 768 \
 PYTHONPATH=. python -m unittest discover -s tests -v
 ```
 
-Skip data preparation when the verified split already exists. Generation may differ across hardware, PyTorch versions, or checkpoints. The saved sample judgments apply only to their exact input hash: a mismatch requires a new review. Running the audit without `--semantic-review` applies rules alone, which is a different data condition and must be recorded separately. Completed experiments are reused only when their settings, data, and checkpoint hashes match.
+Skip data preparation when the verified split already exists. Scripts automatically check data, checkpoint, and review-record consistency. A data/review mismatch requires a new review. Running the audit without `--semantic-review` applies rules alone and is recorded as a separate data condition. Completed experiments are reused when their settings, data, and checkpoints match.
 
 Full datasets, trained weights, and logs remain local and are excluded from Git. The repository publishes configurations, results, summaries, figures, and fixed generation examples. Base features and optional dependencies are documented in [README_upstream.md](README_upstream.md) and `requirements.txt`. `scripts/blind_review.py` supports randomized A/B forms and complete item-level summaries for a future independent review.
 
-Generated examples contain serious medical factual errors. This is a training/alignment research project; the evidence does not support clinical use or claims of improved medical correctness or DPO win rates.
+This is a fine-tuning and alignment research project. Clinical validation has not been performed.
 
 ## Attribution and license
 
