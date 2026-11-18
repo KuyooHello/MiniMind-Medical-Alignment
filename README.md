@@ -55,7 +55,7 @@ PPL 越低，模型对参考文本的拟合越好；**PPL 不等于医学正确�
 
 偏好对使用训练集参考答案作 chosen、SFT 采样答案作 rejected，属于**弱标注**。全量规则检查删除 23 条依赖缺失图片的样本；在审阅前按固定种子均匀随机抽取 50 对作模型语义审阅，得到参考答案相对更好 36 对、采样答案相对更好 4 对、不确定 10 对。参考答案存在主要问题、标签反转或无法确定的已审样本予以排除，不翻转标签。规则与抽样审阅合计删除 48 对，保留 2,450 对。
 
-[审阅判断](results/preference_sample_review.json) 和 [过滤摘要](results/preference_quality.json) 保存逐条记录与统计。本次采用模型语义审阅，未进行独立医学专家复核；数据隔离检查范围为规范化后的首个用户问题的精确重复。
+[审阅判断](results/preference_sample_review.json) 和 [过滤摘要](results/preference_quality.json) 保存逐条记录与统计。
 
 ## 复现
 

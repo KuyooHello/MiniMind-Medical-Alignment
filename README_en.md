@@ -55,7 +55,7 @@ The source is [HuatuoGPT-sft-data-v1](https://huggingface.co/datasets/FreedomInt
 
 Training reference answers are designated chosen and SFT generations rejected: these are **weak labels**. Rules remove 23 pairs requiring unavailable images. A uniform random sample of 50 pairs, fixed before inspection, receives model semantic review: 36 favor the reference, 4 the sampled response, and 10 are uncertain. Reviewed pairs with uncertain/reversed preferences or major reference problems are removed without label flipping. Rules and sampled review remove 48 pairs in total, retaining 2,450.
 
-[Item-level judgments](results/preference_sample_review.json) and the [quality summary](results/preference_quality.json) record the review decisions and counts. Review uses a model, without independent medical-expert review. Isolation checks cover exact matches of normalized first-user questions.
+[Item-level judgments](results/preference_sample_review.json) and the [quality summary](results/preference_quality.json) record the review decisions and counts.
 
 ## Reproduction
 
