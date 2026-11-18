@@ -1,0 +1,16 @@
+{
+  "reviewer_type": "model_review",
+  "independent_human_review": false,
+  "human_medical_validation_status": "not_performed",
+  "scored_form_sha256": "9ea98df43e8b804e6c915e5f6726064aae22abb404ccdbf409819abcab8fcf1a",
+  "judgments_locked_at_utc": "2026-11-18T05:44:57.368089+00:00",
+  "blinded_review_limit": "One model reviewer with project context. Previously exposed questions were excluded. Only anonymous A/B answers were inspected for these new questions; the identity mapping and model-labelled new outputs were not inspected until all judgments were locked. This is not an independent human or clinical expert assessment.",
+  "reference_answers_shown": false,
+  "evidence_policy": "Primary medical sources were checked for substantive factual judgments; URLs are recorded per item.",
+  "major_issue_definition": "Reviewer-assessed substantial factual/safety error, fabricated case facts, or serious failure to address the task. Not a clinical accuracy label.",
+  "tie_category_definition": {
+    "similar_quality": "No clear relative advantage; this does not certify either answer as complete or correct.",
+    "both_poor": "Both answers contain comparable major problems without a clear relative advantage.",
+    "uncertain": "Evidence is insufficient to rank the answers reliably."
+  }
+}

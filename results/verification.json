@@ -1,7 +1,7 @@
 {
   "unit_tests": {
     "command": "PYTHONPATH=. python -m unittest discover -s tests -v",
-    "passed": 41,
+    "passed": 48,
     "failed": 0
   },
   "real_checkpoint_batch_consistency": {
@@ -21,10 +21,12 @@
   "validation_result_sha256": "c1ef1e701d26865beb4c7011287cc36fef99fd0f1102a59d3d5d367cbf27c9b3",
   "tests_source_sha256": {
     "tests/test_alignment_objectives.py": "574ab3b2f89128e073ec7d6915327d4a147d167bbfcb08c67184b4f1a638484c",
+    "tests/test_answer_review.py": "b98b8b9f0778e052ef83a5b246c1ebfd00119ed6fa4b01961f6512d009ab1653",
     "tests/test_blind_review.py": "7175a6c0410dd3a7db120823acfcc5d7f0d36b51f24c192a5eabaa444f045fb7",
     "tests/test_data_splits.py": "d7c079e9eab3d6387cf6ce3dede22c5aed0633d34c232f23a3cd0d648cb79aff",
     "tests/test_dpo_diagnostics.py": "88e016c9beab4904f0f3ccaa0ee7abfec54c722dd7fa68d0f830e2b3ac890ec8",
     "tests/test_experiment_runner.py": "11d6b58c18ba7e9c39d6fb2bbc141e873236225b5ee0e50e6281377b882a612a",
+    "tests/test_generation_metadata.py": "ff32b9387cfed33bace3e90129fd8a6538e58456782f261abad6c4d56b001cae",
     "tests/test_kv_cache.py": "c10919efe69bb06f1c2589f8901351d057f0b8d5776f91e5256b7685204ff177",
     "tests/test_preference_audit.py": "1b32a0cf1ad6a6ced75f4c5c59a8df728a7f39279d3d5df16c539f4a4a0f3ea4"
   },
@@ -48,5 +50,29 @@
     "all_health_counts_zero": true,
     "test_set_evaluated": false,
     "loss_gradient_regression_cases_passed": 8
+  },
+  "answer_review": {
+    "report": "results/answer_review.json",
+    "report_sha256": "0fe60217b1846da67c141416987632c2a0d4c221d9d04c213e6f2aac2cb20110",
+    "protocol": "results/answer_review_protocol.json",
+    "protocol_sha256": "d94777610c032b8991aa6509549a1422d9fd2d462343f29c1201d7371265f4ba",
+    "judgments": "results/answer_review_judgments.json",
+    "judgments_sha256": "79a4afa969d40cbda80d1f3ca0231071b956aa3c5061dbce5bb0acc67c44c139",
+    "scored_form_sha256": "9ea98df43e8b804e6c915e5f6726064aae22abb404ccdbf409819abcab8fcf1a",
+    "judgment_lock_sha256": "a1a8fa63edb2674d5db2be6c551ca66ef48084faa297c93199ab3c372ad7be7a",
+    "samples": 100,
+    "all_selected_pairs_judged": true,
+    "identities_hidden_until_all_judgments_locked": true,
+    "public_files_reconstruct_locked_judgments_cases_mapping_and_original_form": true,
+    "selection_data_and_checkpoint_fingerprints_match": true,
+    "cli_help_entrypoints_passed": 2,
+    "reviewer_type": "model_review",
+    "independent_human_review": false,
+    "source_sha256": {
+      "scripts/prepare_answer_review.py": "9b22046a0c8412b6a07bede33695d80fdb0bcb2a971e63c0932b3bccda63dfd0",
+      "scripts/finalize_answer_review.py": "e9421acd56e75f3dcabe686b27d521a68efe6135087ed74b3f8cd076e1ba2f18",
+      "scripts/generation_utils.py": "adccd8e6677a975e7f6eb48e9cac1f7ab658993045227335faa6137d6047eee4",
+      "scripts/blind_review.py": "2ae5e88bfe2cb5dbc6c4077c526c3a11496ba47c90a9216ccd705a2d55209bb4"
+    }
   }
 }

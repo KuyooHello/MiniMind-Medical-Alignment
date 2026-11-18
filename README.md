@@ -2,7 +2,7 @@
 
 基于 [MiniMind](https://github.com/jingyaogong/minimind) 的 **64M 中文医疗问答微调与偏好对齐实验**，围绕嵌入噪声正则化、偏好目标的长度处理和弱偏好数据质量开展对照研究。
 
-[English](README_en.md) · [实验配置](configs/experiments.json) · [完整结果](results/experiments.json) · [数据说明](dataset/dataset.md) · [生成样例](examples/eval_cases_sample.json)
+[English](README_en.md) · [实验配置](configs/experiments.json) · [完整结果](results/experiments.json) · [数据说明](dataset/dataset.md) · [生成样例](examples/eval_cases_sample.json) · [100 对匿名评审](examples/answer_review.csv)
 
 模型为 8 层、hidden size 768，共 **63,912,192 个独立参数**。本项目实现了 SFT、NEFTune、求和／均值 DPO 与 chosen NLL 的可切换训练，以及数据隔离、抽样审阅和统一评测。模型结构、tokenizer 和基础训练框架来自 MiniMind；NEFTune、DPO 均按原论文注明来源。
 
@@ -16,6 +16,7 @@
 | 数据隔离 | 规范化后的首个用户问题分组，train/val/test 精确交集为 0；DPO 问题仅来自 train |
 | 模型选择 | 固定代表种子 42，只按验证集回复 NLL 选择默认模型；其他 SFT 种子用于重复性分析 |
 | 最终评测 | 封存的 1,000 个新问题；同时报告全对话与 assistant 回复 PPL |
+| 生成质量评估 | 从测试集抽取此前未展示的 100 个问题，固定候选后进行匿名 A/B 模型评审 |
 
 SFT 使用学习率 5e-5、batch size 32、最大长度 512。全部 DPO 从同一个 NEFTune seed-42 权重开始，使用 β=0.15、学习率 2e-6、batch size 8、2 epochs。四组目标消融共享相同数据和超参数；过滤数据对照单独改变数据。完整设置见 [配置文件](configs/experiments.json)，实际环境见 [环境记录](results/environment.json)。
 
@@ -48,6 +49,20 @@ PPL 越低，模型对参考文本的拟合越好；**PPL 不等于医学正确�
 默认推理权重 `medical_model_768.pth` 由验证集选为 **NEFTune SFT，seed 42**；DPO 对照 `medical_dpo_768.pth` 为过滤数据的均值 DPO + NLL。选择记录见 [验证集结果](results/validation.json) 与 [选择依据](results/selection.json)，测试集没有参与选择。
 
 图中的训练曲线来自实际日志中的稀疏 minibatch 统计，不代表整轮平均值；原始数值见 [training_metrics.csv](results/training_metrics.csv)。[20 条生成样例](examples/eval_cases_sample.json) 由固定随机抽样得到，完整保留错误与截断输出，未用于报告胜率。
+
+### 匿名 A/B 评审
+
+对比验证集已选定的 NEFTune SFT seed-42 与过滤数据的均值 DPO + NLL。排除此前展示过的问题后，从 980 个候选问题中固定抽取 100 个；抽样和生成种子均为 73。两模型使用相同生成参数：最多 384 个新 token、temperature=0.7、top-p=0.9、top-k=50、batch size=20，GPU BF16 推理。A/B 位置各占一半，先按事实与安全、相关性、完整性逐条判断，锁定全部判断后再揭示身份。
+
+| DPO 胜 | 平局 | SFT 胜 | DPO 胜率，排除平局 | Wilson 95% 区间 | 平局计半分 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 27 | 36 | 37 | 42.19%（27/64） | 30.87%–54.39% | 45.00% |
+
+本轮由一个具有项目上下文的模型评审者完成，不向其展示参考答案或当前样本的模型身份。36 个平局中，29 个为双方均有明显问题、6 个为质量接近、1 个为证据不足。明显问题标记为 SFT 70/100、DPO 71/100，包括事实错误、编造病情和严重偏题；这些是审阅标记，不能换算成医学正确率。相对胜出也不代表答案合格。
+
+SFT 全部生成 EOS；DPO 有 1 条达到 384-token 上限且未生成 EOS，该条原样纳入统计，未剔除。EOS 只表示生成结束标记，不能证明内容完整。区间包含 50%，**本轮未提供 DPO 回答质量优于 SFT 的证据**，默认推理模型仍为验证集选定的 SFT。
+
+[全部匿名答案与判分](examples/answer_review.csv) · [逐条依据及揭示后的身份](results/answer_review_judgments.json) · [统计](results/answer_review.json) · [固定方案](results/answer_review_protocol.json) · [评审来源](results/answer_review_provenance.json)
 
 ### DPO 训练诊断
 
@@ -145,7 +160,16 @@ KV Cache 测试覆盖逐 token 续写、分块续写、左填充批量输入、�
 
 诊断配置绑定本次输入文件；更换数据或初始权重时，应按实际文件更新配置中的校验记录。
 
-如需后续人工 A/B 评审，可运行 `scripts/blind_review.py prepare`，随机化模型顺序后填写全部判断，再运行 `summarize`；脚本检查答案内容、样本完整性和来源记录，分别报告排除平局与平局计半分的统计。
+本轮匿名评审使用以下流程。生成脚本不自动判分；先只读取匿名表，将逐条判断写入 `out/answer_blind_review/judgments/batch_*.json`，字段见公开的逐条记录。所有判断完成后，`lock` 保存内容校验记录，`publish` 校验锁定记录后才读取身份映射。更换问题或答案后需要重新评审，不能套用本次判断。
+
+```bash
+# 已有本轮生成结果时跳过；生成后先完成全部匿名判分
+PYTHONPATH=. python scripts/prepare_answer_review.py
+PYTHONPATH=. python scripts/finalize_answer_review.py lock
+PYTHONPATH=. python scripts/finalize_answer_review.py publish
+```
+
+如需另行组织人工评审，`scripts/blind_review.py` 提供通用的 `prepare` / `summarize`，支持单独记录评审来源。
 
 ## 核心实现
 
@@ -163,6 +187,8 @@ KV Cache 测试覆盖逐 token 续写、分块续写、左填充批量输入、�
 | `scripts/evaluate_experiments.py` | 验证集选择、统一测试与多种子汇总 |
 | `scripts/eval_ppl.py` | 全对话及 assistant 回复的 token 加权 NLL/PPL |
 | `scripts/check_kv_cache.py` | 完整前向与缓存前向的 logits、缓存结构及贪心生成一致性检查 |
+| `scripts/prepare_answer_review.py` | 固定候选与未展示问题，生成相同参数的匿名 A/B 表 |
+| `scripts/finalize_answer_review.py` | 完整判分校验、揭示前锁定、身份解码与结果导出 |
 
 项目用于微调与对齐研究，未进行临床验证。
 

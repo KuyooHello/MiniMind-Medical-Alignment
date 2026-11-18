@@ -2,7 +2,7 @@
 
 **64M-parameter Chinese medical QA fine-tuning and preference-alignment experiments**, built on [MiniMind](https://github.com/jingyaogong/minimind). This repository studies embedding noise, preference-score length aggregation, chosen-response NLL, and weak preference-label quality.
 
-[中文](README.md) · [Configuration](configs/experiments.json) · [Results](results/experiments.json) · [Data](dataset/dataset.md) · [Generation examples](examples/eval_cases_sample.json)
+[中文](README.md) · [Configuration](configs/experiments.json) · [Results](results/experiments.json) · [Data](dataset/dataset.md) · [Generation examples](examples/eval_cases_sample.json) · [100-pair anonymous review](examples/answer_review.csv)
 
 The model has 8 layers, hidden size 768, and **63,912,192 unique parameters**. The architecture, tokenizer, and base training framework come from MiniMind. This project adds configurable objectives, split verification, preference auditing, controlled experiments, and evaluation provenance. NEFTune and DPO are credited to their original papers.
 
@@ -16,6 +16,7 @@ The model has 8 layers, hidden size 768, and **63,912,192 unique parameters**. T
 | Isolation | Normalized first-user-question groups are disjoint across train/val/test; DPO uses train only |
 | Selection | Validation response NLL; fixed representative seed 42; other seeds measure repeatability |
 | Final evaluation | 1,000 newly held-out questions; full-conversation and response-token PPL |
+| Generated-answer assessment | 100 previously unshown test questions; candidates frozen before anonymous A/B model review |
 
 SFT uses learning rate 5e-5, batch size 32, and maximum length 512. All DPO runs start from the same seed-42 NEFTune checkpoint, using β=0.15, learning rate 2e-6, batch size 8, and 2 epochs. The four objective variants share the same data and hyperparameters. The filtered-data control changes only the preference data. See [configuration](configs/experiments.json) and the [actual environment](results/environment.json).
 
@@ -48,6 +49,20 @@ On the test set, adding NLL to mean DPO lowers response PPL from 3,304,363.0095 
 Validation selects **seed-42 NEFTune SFT** as `medical_model_768.pth`. The best validation DPO variant, filtered mean DPO + NLL, is available locally as `medical_dpo_768.pth`. See [validation results](results/validation.json) and [selection](results/selection.json). Test scores do not change the selection.
 
 Training curves show sparse logged minibatches rather than epoch averages; values are in [training_metrics.csv](results/training_metrics.csv). The [20 fixed random generation examples](examples/eval_cases_sample.json) retain errors and truncated outputs. They are not used to report a win rate.
+
+### Anonymous A/B review
+
+The comparison uses the validation-selected seed-42 NEFTune SFT and filtered mean DPO + NLL checkpoints. A fixed sample of 100 questions comes from 980 test questions remaining after previously displayed questions are excluded. Sampling and generation seeds are both 73. Both candidates use at most 384 new tokens, temperature 0.7, top-p 0.9, top-k 50, batch size 20, and GPU BF16 inference. A/B positions are balanced. Factuality and safety take priority over relevance and completeness; all judgments are locked before identities are revealed.
+
+| DPO wins | Ties | SFT wins | DPO win rate, excluding ties | Wilson 95% interval | Ties count half |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 27 | 36 | 37 | 42.19% (27/64) | 30.87%–54.39% | 45.00% |
+
+One model reviewer with project context assessed the anonymous answers without reference answers or current per-case model identities. Of 36 ties, 29 have comparable major problems in both answers, 6 have similar quality, and 1 has insufficient evidence. Major-issue flags occur in 70/100 SFT answers and 71/100 DPO answers, including factual errors, fabricated case details, and serious failures to address the question. These are reviewer flags, not clinical accuracy labels; a relative win does not certify a satisfactory answer.
+
+All SFT answers generate EOS; one DPO answer reaches the 384-token limit without EOS and remains in the results. EOS indicates a generated end marker, not semantic completeness. The interval includes 50%: **this review does not provide evidence that DPO improves answer quality over SFT**. The default remains the validation-selected SFT checkpoint.
+
+[All anonymous answers and judgments](examples/answer_review.csv) · [Item-level reasons and revealed identities](results/answer_review_judgments.json) · [Statistics](results/answer_review.json) · [Frozen protocol](results/answer_review_protocol.json) · [Review provenance](results/answer_review_provenance.json)
 
 ### DPO training diagnostics
 
@@ -126,7 +141,18 @@ The diagnostic configuration binds to the recorded inputs. Update its input fing
 
 Skip data preparation when the verified split already exists. Scripts automatically check data, checkpoint, and review-record consistency. A data/review mismatch requires a new review. Running the audit without `--semantic-review` applies rules alone and is recorded as a separate data condition. Completed experiments are reused when their settings, data, and checkpoints match.
 
-Full datasets, trained weights, and logs remain local and are excluded from Git. The repository publishes configurations, results, summaries, figures, and fixed generation examples. Base features and optional dependencies are documented in [README_upstream.md](README_upstream.md) and `requirements.txt`. `scripts/blind_review.py` supports randomized A/B forms and complete item-level summaries for a future independent review.
+Full datasets, trained weights, and logs remain local and are excluded from Git. The repository publishes configurations, results, summaries, figures, and fixed generation examples. Base features and optional dependencies are documented in [README_upstream.md](README_upstream.md) and `requirements.txt`.
+
+The completed model review uses the workflow below. Generation does not score answers automatically: inspect only the anonymous form and save item-level judgments in `out/answer_blind_review/judgments/batch_*.json`, using the fields in the published judgments. After every pair is judged, `lock` records content fingerprints; `publish` verifies them before reading identities. Changed questions or answers require a new review.
+
+```bash
+# Skip generation if this review already exists; finish all anonymous judgments before locking.
+PYTHONPATH=. python scripts/prepare_answer_review.py
+PYTHONPATH=. python scripts/finalize_answer_review.py lock
+PYTHONPATH=. python scripts/finalize_answer_review.py publish
+```
+
+For a separate human review, `scripts/blind_review.py` provides generic `prepare` / `summarize` commands with separate reviewer provenance.
 
 This is a fine-tuning and alignment research project. Clinical validation has not been performed.
 

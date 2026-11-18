@@ -35,10 +35,13 @@ def load_model(checkpoint, device, hidden_size=768, num_hidden_layers=8, dtype=N
 
 @torch.inference_mode()
 def generate_replies(model, tokenizer, prompts, device, batch_size=32,
-                     max_new_tokens=180, temperature=1.0, top_p=0.92):
+                     max_new_tokens=180, temperature=1.0, top_p=0.92,
+                     top_k=50, repetition_penalty=1.0, return_metadata=False):
     if batch_size < 1 or max_new_tokens < 1 or temperature <= 0 or not 0 < top_p <= 1:
         raise ValueError("生成参数不合法")
-    replies = []
+    if top_k < 0 or repetition_penalty <= 0:
+        raise ValueError("top_k 必须非负，repetition_penalty 必须为正")
+    replies, metadata = [], []
     for start in tqdm(range(0, len(prompts), batch_size), desc="Generating"):
         texts = [
             tokenizer.apply_chat_template([{"role": "user", "content": prompt}],
@@ -50,7 +53,17 @@ def generate_replies(model, tokenizer, prompts, device, batch_size=32,
         outputs = model.generate(
             input_ids=encoded["input_ids"], attention_mask=encoded["attention_mask"],
             max_new_tokens=max_new_tokens, do_sample=True, temperature=temperature, top_p=top_p,
+            top_k=top_k, repetition_penalty=repetition_penalty,
             pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id,
         )
-        replies.extend(tokenizer.decode(row[prompt_length:], skip_special_tokens=True).strip() for row in outputs)
-    return replies
+        for row in outputs:
+            generated = row[prompt_length:].tolist()
+            reply = tokenizer.decode(generated, skip_special_tokens=True).strip()
+            replies.append(reply)
+            if return_metadata:
+                eos_position = next((index for index, token in enumerate(generated)
+                                     if token == tokenizer.eos_token_id), None)
+                length = eos_position + 1 if eos_position is not None else len(generated)
+                metadata.append({'generated_tokens': length, 'eos_seen': eos_position is not None,
+                                 'generation_cap_without_eos': eos_position is None and length == max_new_tokens})
+    return (replies, metadata) if return_metadata else replies

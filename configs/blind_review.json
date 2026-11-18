@@ -1,0 +1,28 @@
+{
+  "purpose": "Paired anonymous model review of the frozen validation-selected SFT and DPO candidates.",
+  "sft_checkpoint": "out/medical_sft_neftune_768.pth",
+  "dpo_checkpoint": "out/medical_dpo_768.pth",
+  "selection_record": "results/selection.json",
+  "split_dir": "dataset/medical",
+  "split": "test",
+  "samples": 100,
+  "prompt_seed": 73,
+  "generation_seed": 73,
+  "exclude_previous_cases": ["examples/eval_cases_sample.json", "out/eval_generation_v2_test.json"],
+  "generation": {
+    "batch_size": 20,
+    "max_new_tokens": 384,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 50,
+    "repetition_penalty": 1.0
+  },
+  "review": {
+    "reviewer_type": "model_review",
+    "allocation": "Balanced A/B positions, shuffled with a private random seed; disclose only after judgments are locked.",
+    "reference_answers": "Not shown to the reviewer; source answers are weak labels.",
+    "priorities": ["Factual correctness and absence of dangerous unsupported advice", "Relevance to the actual question", "Completeness and internal consistency"],
+    "tie_categories": ["similar_quality", "both_poor", "uncertain"],
+    "policy": "Judge all selected pairs. Do not reward verbosity or politeness alone. Prefer a clearly safer and more relevant answer; use a tie when both contain comparable major problems or evidence is insufficient. Do not remove length-capped responses."
+  }
+}
